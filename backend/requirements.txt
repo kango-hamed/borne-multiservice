@@ -21,7 +21,7 @@ pillow==11.0.0
 python-docx==1.1.2
 
 # ── Impression Windows ────────────────────────────────────────────────────────
-pywin32==308
+pywin32>=306
 # SumatraPDF → exécutable portable à placer dans backend/bin/SumatraPDF.exe
 # Téléchargement : https://www.sumatrapdfreader.org/download-free-pdf-viewer
 

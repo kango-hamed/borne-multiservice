@@ -90,7 +90,11 @@ async def get_session(
 
     # Vérification expiration par timeout
     now = datetime.now(timezone.utc)
-    if session.status == "active" and session.expires_at < now:
+    expires_at = session.expires_at
+    if expires_at.tzinfo is None:
+        now = now.replace(tzinfo=None)
+
+    if session.status == "active" and expires_at < now:
         session.status = "expiree"
         await db.flush()
 

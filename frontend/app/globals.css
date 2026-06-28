@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1E2761;
+  --color-accent: #CADCFC;
+  --color-success: #02C39A;
+  --color-warning: #F9E795;
+  --color-neutral-dark: #121630;
+  --color-neutral-light: #F5F7FF;
+  
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Animations custom pour les transitions d'écrans */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
