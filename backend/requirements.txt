@@ -1,0 +1,35 @@
+# ── Framework ────────────────────────────────────────────────────────────────
+fastapi[standard]==0.115.6
+uvicorn[standard]==0.32.1
+
+# ── Base de données ───────────────────────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# ── Upload & fichiers ─────────────────────────────────────────────────────────
+python-multipart==0.0.20
+aiofiles==24.1.0
+
+# ── Traitement documents ──────────────────────────────────────────────────────
+pypdf==5.1.0
+pillow==11.0.0
+python-docx==1.1.2
+
+# ── Impression Windows ────────────────────────────────────────────────────────
+pywin32==308
+# SumatraPDF → exécutable portable à placer dans backend/bin/SumatraPDF.exe
+# Téléchargement : https://www.sumatrapdfreader.org/download-free-pdf-viewer
+
+# ── Sécurité ──────────────────────────────────────────────────────────────────
+bcrypt==4.2.1
+passlib[bcrypt]==1.7.4
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+httpx==0.28.1
+pytest==8.3.4
+pytest-asyncio==0.24.0
