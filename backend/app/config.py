@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # "production"  → impression réelle via SumatraPDF + pywin32
     ENVIRONMENT: str = "development"
 
+    # ── CORS ──────────────────────────────────────────────────────────────────
+    # Liste d'origines autorisées, séparées par des virgules.
+    # Dev : inclure localhost. Production : URL réelle du frontend déployé.
+    # NE JAMAIS utiliser "*" en prod avec allow_credentials=True (rejeté par les navigateurs).
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property
@@ -43,6 +49,11 @@ class Settings(BaseSettings):
     @property
     def max_file_size_bytes(self) -> int:
         return self.MAX_FILE_SIZE_MB * 1024 * 1024
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS_ORIGINS (chaîne CSV) en liste d'origines nettoyées."""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
 @lru_cache
