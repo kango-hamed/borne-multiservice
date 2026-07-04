@@ -10,7 +10,11 @@ Responsabilités :
 """
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 from pathlib import Path
 
 from fastapi import FastAPI

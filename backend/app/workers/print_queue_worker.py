@@ -101,11 +101,13 @@ async def _process_next_job() -> None:
                         f"job={job.id} | code={job2.withdrawal_code}"
                     )
                 else:
-                    # Échec d'impression : repasse en "paye" pour un re-essai ultérieur
-                    # (le worker le reprendra au prochain polling)
-                    job2.status = "paye"
-                    logger.warning(
-                        f"[WORKER] Échec d'impression — job={job.id} "
-                        f"→ remis en file pour re-essai"
+                    # Échec d'impression définitif : marque le job en erreur
+                    # N.B. : on utilise "paiement_expire" qui est le seul statut
+                    # terminal d'erreur disponible dans l'enum actuel.
+                    # TODO : ajouter un statut "impression_echec" dans une migration future.
+                    job2.status = "paiement_expire"
+                    logger.error(
+                        f"[WORKER] Échec d'impression définitif — job={job.id} "
+                        f"| fichier={job2.original_filename} → statut paiement_expire"
                     )
                 await db2.commit()

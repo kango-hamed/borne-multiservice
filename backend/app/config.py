@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # "production"  → impression réelle via SumatraPDF + pywin32
     ENVIRONMENT: str = "development"
 
+    # ── Mode d'impression ─────────────────────────────────────────────────────
+    # "mock" → stub d'impression (log seulement)
+    # "real" → impression réelle (via SumatraPDF sur Windows, lp sur Unix)
+    PRINTING_MODE: str = "mock"
+
     # ── CORS ──────────────────────────────────────────────────────────────────
     # Liste d'origines autorisées, séparées par des virgules.
     # Dev : inclure localhost. Production : URL réelle du frontend déployé.
