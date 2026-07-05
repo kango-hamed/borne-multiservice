@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE_MB: int = 20
 
+    # ── Scan de document (caméra téléphone) ───────────────────────────────────
+    # Nombre maximal de pages photographiées assemblées en un seul PDF
+    MAX_SCAN_PAGES: int = 30
+
     # ── Sessions ──────────────────────────────────────────────────────────────
     SESSION_EXPIRY_MINUTES: int = 10
 

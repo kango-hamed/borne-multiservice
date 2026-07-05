@@ -16,10 +16,15 @@ import uuid
 from pathlib import Path
 
 import aiofiles
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.config import settings
-from app.exceptions import FileTooLargeError, UnsupportedFileFormatError
+from app.exceptions import (
+    EmptyScanError,
+    FileTooLargeError,
+    TooManyScanPagesError,
+    UnsupportedFileFormatError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +35,9 @@ ALLOWED_MIME_TYPES: dict[str, str] = {
     "image/png": ".png",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 }
+
+# ── Types image acceptés pour le scan (photos de pages) ───────────────────────
+SCAN_ALLOWED_MIME_TYPES: set[str] = {"image/jpeg", "image/png", "image/webp"}
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -180,3 +188,105 @@ def _resize_image_preview(image_path: str, output_path: str) -> None:
     with Image.open(image_path) as img:
         img.thumbnail((800, 1200), Image.LANCZOS)
         img.save(output_path, "PNG")
+
+
+# ── Scan de document (assemblage d'images en PDF) ─────────────────────────────
+
+def _prepare_scanned_page(raw: bytes, grayscale: bool) -> Image.Image:
+    """
+    Ouvre une photo de page et la prépare pour l'impression.
+
+    - Respecte l'orientation EXIF (photos prises en portrait/paysage).
+    - En mode "document" (grayscale=True) : conversion N&B + auto-contraste
+      pour rendre le texte plus lisible et alléger le fichier.
+    - Sinon : conservation fidèle des couleurs (RGB).
+
+    L'image retournée est détachée du buffer source (chargée en mémoire).
+    """
+    try:
+        with Image.open(io.BytesIO(raw)) as src:
+            # Corrige l'orientation d'après les métadonnées EXIF du téléphone
+            img = ImageOps.exif_transpose(src)
+            if grayscale:
+                img = ImageOps.autocontrast(img.convert("L"))
+                # Repasse en RGB : Pillow n'assemble un PDF multi-pages
+                # de façon fiable qu'avec des images de même mode.
+                img = img.convert("RGB")
+            else:
+                img = img.convert("RGB")
+            img.load()
+            return img
+    except UnsupportedFileFormatError:
+        raise
+    except Exception as e:  # décodage impossible → image corrompue / format exotique
+        logger.warning(f"Image de scan illisible : {e}")
+        raise UnsupportedFileFormatError("image")
+
+
+async def save_scan_as_pdf(
+    images: list[bytes],
+    job_id: uuid.UUID,
+    grayscale: bool = False,
+) -> tuple[str, int]:
+    """
+    Assemble une liste de photos de pages en un unique PDF multi-pages.
+
+    Chaque élément de `images` est le contenu brut d'une photo (JPEG/PNG/WebP).
+    Les pages sont conservées dans l'ordre fourni par le frontend.
+
+    Args:
+        images: Liste des contenus bruts, un par page, dans l'ordre.
+        job_id: UUID du job (utilisé pour nommer le répertoire).
+        grayscale: True pour optimiser en noir & blanc (documents texte).
+
+    Returns:
+        (chemin absolu du PDF, nombre de pages)
+
+    Raises:
+        EmptyScanError: si aucune image n'est fournie.
+        TooManyScanPagesError: si plus de MAX_SCAN_PAGES pages.
+        FileTooLargeError: si le volume total dépasse la limite.
+        UnsupportedFileFormatError: si une image est illisible.
+    """
+    if not images:
+        raise EmptyScanError()
+
+    if len(images) > settings.MAX_SCAN_PAGES:
+        raise TooManyScanPagesError(settings.MAX_SCAN_PAGES)
+
+    total_size = sum(len(chunk) for chunk in images)
+    if total_size > settings.max_file_size_bytes:
+        raise FileTooLargeError(settings.MAX_FILE_SIZE_MB)
+
+    # Préparation de chaque page (orientation, mode couleur)
+    pages = [_prepare_scanned_page(raw, grayscale) for raw in images]
+
+    # Création du répertoire du job
+    job_dir = Path(settings.UPLOAD_DIR) / str(job_id)
+    job_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = job_dir / "document-scanne.pdf"
+
+    try:
+        # Pillow assemble un PDF multi-pages : 1re page + suivantes en append
+        pages[0].save(
+            str(pdf_path),
+            "PDF",
+            resolution=150.0,
+            save_all=True,
+            append_images=pages[1:],
+        )
+
+        # Aperçu : rendu réel de la première page scannée (pas un placeholder)
+        preview_path = job_dir / "preview.png"
+        preview = pages[0].copy()
+        preview.thumbnail((800, 1200), Image.LANCZOS)
+        preview.save(str(preview_path), "PNG")
+    finally:
+        for page in pages:
+            page.close()
+
+    logger.info(
+        f"Scan assemblé : {pdf_path} ({len(images)} page(s), {total_size} octets)"
+    )
+
+    return str(pdf_path.resolve()), len(images)

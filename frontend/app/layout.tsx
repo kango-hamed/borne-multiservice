@@ -36,8 +36,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${outfit.variable} font-sans h-full antialiased`}>
-      <body className="min-h-full bg-[#F5F7FF] text-[#121630] flex flex-col">
+    <html lang="fr" className={`${outfit.variable} font-sans h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full bg-[#F5F7FF] text-[#121630] flex flex-col" suppressHydrationWarning>
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

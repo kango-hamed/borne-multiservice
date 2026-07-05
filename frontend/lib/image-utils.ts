@@ -70,3 +70,74 @@ export async function compressImage(file: File, maxWidth = 2048, quality = 0.8):
     reader.onerror = () => resolve(file);
   });
 }
+
+/**
+ * Normalise une photo de page scannée en JPEG.
+ *
+ * Contrairement à `compressImage`, la conversion est TOUJOURS appliquée :
+ * cela uniformise le format (une photo galerie peut être HEIC/PNG),
+ * réduit le poids avant envoi sur réseau faible, et garantit que le
+ * backend reçoit du JPEG décodable par Pillow.
+ *
+ * En cas d'échec (canvas non supporté, décodage impossible), on retombe
+ * sur le fichier d'origine pour ne jamais bloquer le scan.
+ */
+export async function prepareScanImage(
+  file: File,
+  maxWidth = 2000,
+  quality = 0.85
+): Promise<File> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const baseName = file.name.replace(/\.[^/.]+$/, "") || "page";
+            resolve(
+              new File([blob], `${baseName}.jpg`, {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              })
+            );
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => resolve(file);
+    };
+
+    reader.onerror = () => resolve(file);
+  });
+}

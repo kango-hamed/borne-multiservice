@@ -69,6 +69,22 @@ class UnsupportedFileFormatError(HTTPException):
         )
 
 
+class EmptyScanError(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Aucune page à scanner. Prenez au moins une photo du document.",
+        )
+
+
+class TooManyScanPagesError(HTTPException):
+    def __init__(self, max_pages: int):
+        super().__init__(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Trop de pages scannées. Maximum : {max_pages} pages par document.",
+        )
+
+
 class PaymentAlreadyConfirmedError(HTTPException):
     def __init__(self):
         super().__init__(

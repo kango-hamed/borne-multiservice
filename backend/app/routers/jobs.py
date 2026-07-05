@@ -18,11 +18,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.exceptions import JobNotFoundError, SessionExpiredError, SessionNotFoundError
+from app.exceptions import (
+    EmptyScanError,
+    JobNotFoundError,
+    SessionExpiredError,
+    SessionNotFoundError,
+    UnsupportedFileFormatError,
+)
 from app.models.print_job import PrintJob
 from app.models.session import Session
 from app.schemas.job import JobConfig, JobCreateResponse, JobStatusResponse
-from app.services.pdf_utils import generate_preview, save_upload
+from app.services.pdf_utils import (
+    SCAN_ALLOWED_MIME_TYPES,
+    generate_preview,
+    save_scan_as_pdf,
+    save_upload,
+)
 from app.services.pricing import calculate_price
 
 router = APIRouter(tags=["Jobs"])
@@ -122,6 +133,67 @@ async def create_job(
         pages=pages,
         status=job.status,
         preview_url=preview_url,
+    )
+
+
+@router.post("/scan", response_model=JobCreateResponse, status_code=201)
+async def create_scan_job(
+    session_token: uuid.UUID = Form(...),
+    files: list[UploadFile] = File(...),
+    grayscale: bool = Form(False),
+    db: AsyncSession = Depends(get_db),
+) -> JobCreateResponse:
+    """
+    Scan de document : assemble plusieurs photos de pages en un PDF imprimable.
+
+    L'usager photographie chaque page depuis son téléphone ; les images sont
+    envoyées ici dans l'ordre et combinées en un seul document multi-pages qui
+    rejoint le flux d'impression classique (config → prix → paiement).
+
+    - Valide la session
+    - Valide que chaque fichier est bien une image
+    - Assemble le PDF (option `grayscale` pour optimiser les documents texte)
+    - Génère un aperçu de la première page
+    - Crée le job en statut "en_creation"
+    """
+    session = await _get_valid_session(session_token, db)
+
+    if not files:
+        raise EmptyScanError()
+
+    # Lecture + validation du type de chaque photo
+    images: list[bytes] = []
+    for upload in files:
+        mime = (upload.content_type or "").split(";")[0].strip()
+        if mime not in SCAN_ALLOWED_MIME_TYPES:
+            raise UnsupportedFileFormatError(mime or "inconnu")
+        images.append(await upload.read())
+
+    job_id = uuid.uuid4()
+
+    # Assemblage PDF + aperçu (lève EmptyScan / TooManyScanPages / FileTooLarge)
+    file_path, pages = await save_scan_as_pdf(images, job_id, grayscale)
+
+    original_filename = "Document scanné.pdf"
+
+    job = PrintJob(
+        id=job_id,
+        session_id=session.id,
+        kiosk_id=session.kiosk_id,
+        file_path=file_path,
+        original_filename=original_filename,
+        pages=pages,
+        status="en_creation",
+    )
+    db.add(job)
+    await db.flush()
+
+    return JobCreateResponse(
+        job_id=job.id,
+        original_filename=original_filename,
+        pages=pages,
+        status=job.status,
+        preview_url=f"/jobs/{job_id}/preview",
     )
 
 

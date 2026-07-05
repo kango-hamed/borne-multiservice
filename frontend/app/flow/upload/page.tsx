@@ -93,6 +93,33 @@ export default function UploadPage() {
       <StepHeader title="Votre document" step={1} showBack={false} />
 
       <div className="flex-1 px-4 py-6 flex flex-col gap-5">
+        {/* Scanner avec l'appareil photo */}
+        <button
+          onClick={() => router.push("/flow/scan")}
+          className="flex items-center gap-4 rounded-2xl p-4 bg-primary text-white shadow-lg shadow-primary/25 active:scale-[0.99] transition-transform text-left"
+        >
+          <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+            <svg className="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <p className="font-bold text-base">Scanner un document</p>
+            <p className="text-xs text-accent/80 mt-0.5">{"Photographiez vos pages avec l'appareil photo"}</p>
+          </div>
+          <svg className="w-5 h-5 ml-auto text-white/70 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+
+        {/* Séparateur */}
+        <div className="flex items-center gap-3">
+          <span className="flex-1 h-px bg-accent/40" />
+          <span className="text-xs font-semibold text-neutral-dark/40 uppercase tracking-wider">ou importer un fichier</span>
+          <span className="flex-1 h-px bg-accent/40" />
+        </div>
+
         {/* Zone de dépôt */}
         <div
           onClick={() => fileInputRef.current?.click()}

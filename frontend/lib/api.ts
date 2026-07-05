@@ -108,6 +108,27 @@ export const api = {
     });
   },
 
+  // Scan de document : envoie les photos de pages (dans l'ordre) au backend,
+  // qui les assemble en un unique PDF imprimable.
+  async scanDocument(
+    sessionToken: string,
+    pages: File[],
+    grayscale: boolean
+  ): Promise<JobCreateResponse> {
+    const formData = new FormData();
+    formData.append("session_token", sessionToken);
+    formData.append("grayscale", grayscale ? "true" : "false");
+    // Champ répété "files" : l'ordre d'ajout est conservé côté backend
+    for (const page of pages) {
+      formData.append("files", page);
+    }
+
+    return request<JobCreateResponse>("/jobs/scan", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
   // Configure l'impression
   async configureJob(
     jobId: string,
