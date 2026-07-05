@@ -27,6 +27,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Interfaces de réponse API ────────────────────────────────────────────────
 
+export interface KioskPublic {
+  id: string;
+  name: string;
+  status: "actif" | "maintenance" | "hors_ligne";
+  location_lat: number | null;
+  location_lng: number | null;
+  created_at: string;
+}
+
 export interface SessionResponse {
   session_token: string;
   kiosk_id: string;
@@ -172,5 +181,10 @@ export const api = {
   // Récupère l'URL absolue de l'aperçu du fichier
   getPreviewUrl(jobId: string): string {
     return `${API_BASE_URL}/jobs/${jobId}/preview`;
+  },
+
+  // Récupère la liste de toutes les bornes (pour la carte)
+  async listKiosks(): Promise<KioskPublic[]> {
+    return request<KioskPublic[]>("/kiosks");
   },
 };
