@@ -76,7 +76,17 @@ async def initiate_payment(
         raise PaymentAlreadyConfirmedError()
 
     # Appel au provider via l'interface abstraite
-    provider = get_payment_provider(body.provider)
+    try:
+        provider = get_payment_provider(body.provider)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=(
+                f"Le moyen de paiement '{body.provider}' n'est pas encore disponible "
+                f"dans ce prototype. Veuillez utiliser le 'Simulateur (test)'."
+            )
+        )
+
     result_payment = await provider.initiate_payment(
         job_id=job_id,
         amount_fcfa=job.price_fcfa or 0,

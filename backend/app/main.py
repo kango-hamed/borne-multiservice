@@ -10,8 +10,11 @@ Responsabilités :
 """
 import asyncio
 import logging
-import os
+import sys
 from contextlib import asynccontextmanager
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -38,6 +41,13 @@ async def lifespan(app: FastAPI):
     # Création du répertoire d'uploads
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
     logger.info(f"Répertoire uploads : {Path(settings.UPLOAD_DIR).resolve()}")
+
+    # ── Log de configuration CORS (visible immédiatement au démarrage) ────────
+    logger.info("=" * 60)
+    logger.info(f"Environnement       : {settings.ENVIRONMENT}")
+    logger.info(f"Mode production     : {settings.is_production}")
+    logger.info(f"Origines CORS       : {settings.cors_origins_list}")
+    logger.info("=" * 60)
 
     # Démarrage du worker d'impression en arrière-plan
     worker_task = asyncio.create_task(print_queue_worker())
@@ -69,10 +79,13 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-# En production, restreindre allow_origins à l'origine du frontend
+# Origines lues depuis CORS_ORIGINS dans .env (liste CSV).
+# Valeur par défaut : http://localhost:3000,http://127.0.0.1:3000
+# IMPORTANT : ne JAMAIS combiner allow_origins=["*"] avec allow_credentials=True
+#             → rejeté par tous les navigateurs (violation spec CORS).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if not settings.is_production else [],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
