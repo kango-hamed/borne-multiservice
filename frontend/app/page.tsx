@@ -1,16 +1,16 @@
-import Link from "next/link";
+"use client";
 
-const DEMO_KIOSK_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+import Link from "next/link";
 
 // Icône imprimante
 function PrinterIcon() {
   return (
     <svg
-      className="w-12 h-12 text-accent"
+      className="w-14 h-14"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
-      strokeWidth={1.5}
+      strokeWidth={1.2}
       stroke="currentColor"
     >
       <path
@@ -22,8 +22,8 @@ function PrinterIcon() {
   );
 }
 
-// Icône fusée (démo)
-function RocketIcon() {
+// Icône carte
+function MapPinIcon() {
   return (
     <svg
       className="w-5 h-5"
@@ -35,16 +35,14 @@ function RocketIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z" />
-      <path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z" />
-      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   );
 }
 
-// Icône carte / map-pin
-function MapIcon() {
+// Icône QR code
+function QrCodeIcon() {
   return (
     <svg
       className="w-5 h-5"
@@ -56,56 +54,86 @@ function MapIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
-      <line x1="9" y1="3" x2="9" y2="18" />
-      <line x1="15" y1="6" x2="15" y2="21" />
+      <rect x="2" y="2" width="8" height="8" rx="1" />
+      <rect x="14" y="2" width="8" height="8" rx="1" />
+      <rect x="2" y="14" width="8" height="8" rx="1" />
+      <path d="M14 14h2v2h-2z" />
+      <path d="M20 14h2v2h-2z" />
+      <path d="M14 20h2v2h-2z" />
+      <path d="M20 20h2v2h-2z" />
+      <path d="M18 14h-1v4h1" />
+      <path d="M14 18v-1h4v1" />
     </svg>
+  );
+}
+
+// Petit badge de service
+function ServiceBadge({ icon, label }: { icon: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-xs font-medium text-accent/90">
+      <span>{icon}</span>
+      {label}
+    </span>
   );
 }
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-primary flex flex-col items-center justify-center px-6 gap-8">
-      {/* Logo */}
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-24 h-24 rounded-3xl bg-white/10 backdrop-blur flex items-center justify-center shadow-2xl">
+    <div className="min-h-screen bg-primary flex flex-col items-center justify-center px-6 gap-10 relative overflow-hidden">
+      {/* Cercles décoratifs en arrière-plan */}
+      <div className="absolute top-[-120px] right-[-80px] w-[300px] h-[300px] rounded-full bg-accent/5 blur-3xl" />
+      <div className="absolute bottom-[-100px] left-[-60px] w-[250px] h-[250px] rounded-full bg-success/5 blur-3xl" />
+
+      {/* Logo et branding */}
+      <div className="flex flex-col items-center gap-5 z-10">
+        <div className="w-28 h-28 rounded-[2rem] bg-white/10 backdrop-blur-md flex items-center justify-center shadow-2xl border border-white/10 text-accent">
           <PrinterIcon />
         </div>
         <div className="text-center">
-          <h1 className="text-3xl font-extrabold text-white">Borne Multiservice</h1>
-          <p className="text-accent/70 mt-1">Impression mobile · Paiement sécurisé</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+            Borne Multiservice
+          </h1>
+          <p className="text-accent/60 mt-2 text-sm font-medium tracking-wide">
+            Impression • Photocopie • Scan
+          </p>
         </div>
       </div>
 
-      {/* CTA */}
-      <div className="w-full max-w-sm flex flex-col gap-3">
+      {/* Badges de services */}
+      <div className="flex flex-wrap justify-center gap-2 z-10">
+        <ServiceBadge icon="🖨️" label="Impression" />
+        <ServiceBadge icon="📋" label="Photocopie" />
+        <ServiceBadge icon="📱" label="Scan" />
+      </div>
+
+      {/* Boutons d'action */}
+      <div className="w-full max-w-sm flex flex-col gap-3 z-10">
         <Link
-          href={`/s?kiosk=${DEMO_KIOSK_ID}`}
-          className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-accent text-primary font-bold text-lg shadow-xl active:scale-[0.98] transition-transform"
+          href="/carte"
+          id="btn-find-kiosk"
+          className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl bg-accent text-primary font-bold text-lg shadow-xl shadow-accent/20 active:scale-[0.98] transition-transform"
         >
-          <RocketIcon />
-          Lancer la démo
+          <MapPinIcon />
+          Trouver une borne près de moi
         </Link>
 
         <Link
           href="/carte"
-          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-semibold text-base text-accent/90 active:scale-[0.98] transition-all"
+          id="btn-scan-qr"
+          className="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-2xl font-semibold text-base text-accent/90 active:scale-[0.98] transition-all"
           style={{
             background: "rgba(202,220,252,0.08)",
-            border: "1px solid rgba(202,220,252,0.18)",
+            border: "1px solid rgba(202,220,252,0.15)",
           }}
         >
-          <MapIcon />
-          Voir les bornes sur la carte
+          <QrCodeIcon />
+          J&apos;ai déjà un QR code
         </Link>
-
-        <p className="text-center text-white/30 text-xs mt-1">
-          Borne démo : {DEMO_KIOSK_ID}
-        </p>
       </div>
 
-      <p className="text-white/20 text-xs text-center absolute bottom-6">
-        Prototype — Démonstration uniquement
+      {/* Footer */}
+      <p className="text-white/15 text-xs text-center absolute bottom-6 z-10">
+        © 2026 Borne Multiservice — Tous droits réservés
       </p>
     </div>
   );

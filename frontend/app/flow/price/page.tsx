@@ -27,7 +27,7 @@ export default function PricePage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <StepHeader title="Récapitulatif" step={3} />
+      <StepHeader title="Récapitulatif" step={4} />
 
       <div className="flex-1 px-4 py-6 flex flex-col gap-5">
         {/* Ticket de caisse */}
@@ -40,6 +40,7 @@ export default function PricePage() {
 
           {/* Lignes du ticket */}
           <div className="divide-y divide-accent/20">
+            <ReceiptRow label="Service" value="Impression" />
             <ReceiptRow label="Nombre de pages" value={`${pages} page${pages > 1 ? "s" : ""}`} />
             <ReceiptRow label="Copies" value={`× ${copies}`} />
             <ReceiptRow label="Mode d'impression" value={colorLabel} />

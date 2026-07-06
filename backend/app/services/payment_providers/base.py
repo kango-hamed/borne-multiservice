@@ -102,10 +102,16 @@ def get_payment_provider(provider_name: str) -> PaymentProvider:
     """
     from app.services.payment_providers.mock_provider import MockPaymentProvider
 
+    # Dans le prototype actuel, tous les providers réels utilisent le simulateur.
+    # L'utilisateur a demandé d'activer le test sur eux tous.
+    mock = MockPaymentProvider()
+    
     providers: dict[str, PaymentProvider] = {
-        "mock": MockPaymentProvider(),
-        # "orange_money": OrangeMoneyProvider(),  # À décommenter lors de l'intégration réelle
-        # "wave": WaveProvider(),
+        "mock": mock,
+        "orange_money": mock,
+        "wave": mock,
+        "mtn": mock,
+        "moov": mock,
     }
 
     provider = providers.get(provider_name)

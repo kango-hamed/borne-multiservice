@@ -55,10 +55,13 @@ export default function KioskMap({ kiosks }: KioskMapProps) {
   const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
 
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    if (!mapRef.current) return;
+
+    let initialized = true; // flag to cancel async init if cleanup runs first
 
     // Dynamically import Leaflet to avoid SSR issues
     import("leaflet").then((L) => {
+      if (!initialized || mapInstanceRef.current) return; // already cleaned up or initialized
       // Fix default icon paths
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -180,6 +183,7 @@ export default function KioskMap({ kiosks }: KioskMapProps) {
     });
 
     return () => {
+      initialized = false; // cancel pending async init
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;

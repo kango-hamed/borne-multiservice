@@ -1,1 +1,0 @@
-"""Borne Multiservice — Backend FastAPI."""

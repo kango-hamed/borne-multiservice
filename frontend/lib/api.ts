@@ -88,6 +88,27 @@ export interface PaymentStatusResponse {
   confirmed_at: string | null;
 }
 
+export interface AdminQueueJob {
+  job_id: string;
+  original_filename: string;
+  pages: number;
+  copies: number;
+  color_mode: string;
+  duplex: boolean;
+  price_fcfa: number;
+  status: string;
+  withdrawal_code: string | null;
+  created_at: string;
+  queue_position: number;
+}
+
+export interface AdminQueueResponse {
+  kiosk_id: string;
+  kiosk_name: string;
+  jobs: AdminQueueJob[];
+  total: number;
+}
+
 // ── Endpoints API ────────────────────────────────────────────────────────────
 
 export const api = {
@@ -186,5 +207,26 @@ export const api = {
   // Récupère la liste de toutes les bornes (pour la carte)
   async listKiosks(): Promise<KioskPublic[]> {
     return request<KioskPublic[]>("/kiosks");
+  },
+
+  // ── Méthodes Agent (Admin) ──────────────────────────────────────────────────
+  async getAdminQueue(kioskId: string, pin: string): Promise<AdminQueueResponse> {
+    return request<AdminQueueResponse>(`/admin/kiosks/${kioskId}/queue`, {
+      headers: { "X-Agent-Pin": pin },
+    });
+  },
+
+  async getAdminHistory(kioskId: string, pin: string): Promise<AdminQueueResponse> {
+    return request<AdminQueueResponse>(`/admin/kiosks/${kioskId}/history`, {
+      headers: { "X-Agent-Pin": pin },
+    });
+  },
+
+  async withdrawJob(jobId: string, pin: string, withdrawalCode: string): Promise<any> {
+    return request(`/admin/jobs/${jobId}/withdraw`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_pin: pin, withdrawal_code: withdrawalCode }),
+    });
   },
 };

@@ -13,14 +13,18 @@ export interface FileMetadata {
   previewUrl?: string;
 }
 
+export type ServiceType = "impression" | "photocopie";
+
 interface SessionContextType {
   sessionToken: string | null;
   kioskId: string | null;
   kioskName: string | null;
+  serviceType: ServiceType | null;
   jobId: string | null;
   fileMetadata: FileMetadata | null;
   withdrawalCode: string | null;
   setSession: (token: string, kioskId: string, kioskName: string) => void;
+  setServiceType: (type: ServiceType) => void;
   setJob: (jobId: string, filename: string, pages: number, previewUrl?: string) => void;
   updateJobConfig: (config: Partial<FileMetadata>) => void;
   setWithdrawalCode: (code: string) => void;
@@ -33,6 +37,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [kioskId, setKioskId] = useState<string | null>(null);
   const [kioskName, setKioskName] = useState<string | null>(null);
+  const [serviceType, setServiceTypeState] = useState<ServiceType | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
   const [withdrawalCode, setWithdrawalCodeState] = useState<string | null>(null);
@@ -69,10 +74,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setWithdrawalCodeState(code);
   };
 
+  const setServiceType = (type: ServiceType) => {
+    setServiceTypeState(type);
+  };
+
   const clearSession = () => {
     setSessionToken(null);
     setKioskId(null);
     setKioskName(null);
+    setServiceTypeState(null);
     setJobId(null);
     setFileMetadata(null);
     setWithdrawalCodeState(null);
@@ -84,10 +94,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         sessionToken,
         kioskId,
         kioskName,
+        serviceType,
         jobId,
         fileMetadata,
         withdrawalCode,
         setSession,
+        setServiceType,
         setJob,
         updateJobConfig,
         setWithdrawalCode,

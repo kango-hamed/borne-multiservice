@@ -3,6 +3,7 @@ import { Outfit } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import { SessionProvider } from "@/lib/session-context";
+import { AgentSessionProvider } from "@/lib/agent-context";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -39,7 +40,11 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${outfit.variable} font-sans h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full bg-[#F5F7FF] text-[#121630] flex flex-col" suppressHydrationWarning>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <AgentSessionProvider>
+            {children}
+          </AgentSessionProvider>
+        </SessionProvider>
       </body>
     </html>
   );

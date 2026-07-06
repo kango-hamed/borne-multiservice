@@ -5,10 +5,35 @@ import { useRouter } from "next/navigation";
 import { StepHeader } from "@/components/StepHeader";
 import { WithdrawalCodeDisplay } from "@/components/WithdrawalCodeDisplay";
 import { useSession } from "@/lib/session-context";
+import { usePolling } from "@/hooks/usePolling";
+import { api } from "@/lib/api";
 
 export default function ReadyPage() {
   const router = useRouter();
-  const { withdrawalCode, kioskName, clearSession } = useSession();
+  const { withdrawalCode, kioskName, clearSession, jobId } = useSession();
+
+  const queryFn = React.useCallback(() => {
+    if (!jobId) throw new Error("Pas de job");
+    return api.getJobStatus(jobId);
+  }, [jobId]);
+
+  const checkSuccess = React.useCallback(
+    (data: any) => data.status === "recupere",
+    []
+  );
+
+  const { status } = usePolling({
+    queryFn,
+    checkSuccess,
+    intervalMs: 4000,
+    enabled: !!jobId,
+  });
+
+  React.useEffect(() => {
+    if (status === "success") {
+      router.push("/flow/success");
+    }
+  }, [status, router]);
 
   const handleNewPrint = () => {
     clearSession();
