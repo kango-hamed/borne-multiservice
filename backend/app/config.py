@@ -43,6 +43,20 @@ class Settings(BaseSettings):
     # "real" → impression réelle (via SumatraPDF sur Windows, lp sur Unix)
     PRINTING_MODE: str = "mock"
 
+    # ── Scanner WIA (Windows Image Acquisition) ───────────────────────────────
+    # "mock" → stub (image PNG générée, sans scanner physique)
+    # "real" → acquisition WIA réelle via pywin32
+    SCANNING_MODE: str = "mock"
+
+    # Index du périphérique WIA à utiliser (0 = premier scanner trouvé)
+    SCANNER_WIA_DEVICE_INDEX: int = 0
+
+    # Résolution de scan par défaut en DPI (150 | 200 | 300)
+    SCANNER_DEFAULT_RESOLUTION: int = 200
+
+    # Délai maximum d'acquisition WIA par page (secondes) avant timeout
+    SCANNER_TIMEOUT_SECONDS: int = 60
+
     # ── CORS ──────────────────────────────────────────────────────────────────
     # Liste d'origines autorisées, séparées par des virgules.
     # Dev : inclure localhost. Production : URL réelle du frontend déployé.

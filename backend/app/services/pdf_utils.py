@@ -290,3 +290,61 @@ async def save_scan_as_pdf(
     )
 
     return str(pdf_path.resolve()), len(images)
+
+
+async def assemble_scan_pdf(
+    image_paths: list[str],
+    job_id: uuid.UUID,
+) -> tuple[str, int]:
+    """
+    Assemble une liste de chemins d'images PNG (générés par le scanner) en un unique PDF.
+    Crée également l'aperçu PNG de la première page.
+    """
+    if not image_paths:
+        raise EmptyScanError()
+
+    if len(image_paths) > settings.MAX_SCAN_PAGES:
+        raise TooManyScanPagesError(settings.MAX_SCAN_PAGES)
+
+    # Chargement des images via Pillow
+    pages = []
+    try:
+        for path in image_paths:
+            img = Image.open(path)
+            # Pillow a besoin du mode RGB pour l'assemblage PDF fiable
+            img_rgb = img.convert("RGB")
+            img_rgb.load()
+            pages.append(img_rgb)
+    except Exception as e:
+        logger.error(f"Erreur de chargement d'image pour PDF : {e}")
+        raise UnsupportedFileFormatError("image")
+
+    job_dir = Path(settings.UPLOAD_DIR) / str(job_id)
+    job_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = job_dir / "document-scanne.pdf"
+
+    try:
+        # Assemblage PDF
+        pages[0].save(
+            str(pdf_path),
+            "PDF",
+            resolution=150.0,
+            save_all=True,
+            append_images=pages[1:],
+        )
+
+        # Aperçu
+        preview_path = job_dir / "preview.png"
+        preview = pages[0].copy()
+        preview.thumbnail((800, 1200), Image.LANCZOS)
+        preview.save(str(preview_path), "PNG")
+    finally:
+        for page in pages:
+            page.close()
+
+    logger.info(
+        f"Scan assemblé depuis WIA : {pdf_path} ({len(image_paths)} pages)"
+    )
+
+    return str(pdf_path.resolve()), len(image_paths)
+
