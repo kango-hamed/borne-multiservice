@@ -1,17 +1,36 @@
 """
 jobs.py — Endpoints de gestion des jobs d'impression.
 
-POST  /jobs                → upload fichier, crée le job
-PATCH /jobs/{id}/config    → configure options d'impression + calcule prix
-GET   /jobs/{id}           → statut + position en file (polling léger)
-GET   /jobs/{id}/preview   → aperçu de la première page
+POST   /jobs                          → upload fichier, crée le job
+PATCH  /jobs/{id}/config              → configure options d'impression + calcule prix
+GET    /jobs/{id}                     → statut + position en file (polling léger)
+GET    /jobs/{id}/preview            → aperçu de la première page
+
+Scan matériel (page par page depuis le scanner de la borne) :
+POST   /jobs/scan/start              → ouvre une session de scan
+POST   /jobs/scan/{scan_id}/page     → numérise UNE page, l'ajoute au document
+GET    /jobs/scan/{id}/page/{n}/preview → vignette d'une page numérisée
+DELETE /jobs/scan/{id}/page/{n}      → retire une page mal numérisée
+POST   /jobs/scan/{scan_id}/finish   → clôture : assemble le PDF et crée le job
+POST   /jobs/scan/{scan_id}/cancel   → abandonne la session de scan
 """
+import json
+import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 import aiofiles
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,20 +40,34 @@ from app.database import get_db
 from app.exceptions import (
     EmptyScanError,
     JobNotFoundError,
+    ScanSessionNotFoundError,
     SessionExpiredError,
     SessionNotFoundError,
-    UnsupportedFileFormatError,
+    TooManyScanPagesError,
 )
 from app.models.print_job import PrintJob
 from app.models.session import Session
-from app.schemas.job import JobConfig, JobCreateResponse, JobStatusResponse
+from app.schemas.job import (
+    JobConfig,
+    JobCreateResponse,
+    JobStatusResponse,
+    ScanPageResponse,
+    ScanPagesResponse,
+    ScanStartResponse,
+)
 from app.services.pdf_utils import (
-    SCAN_ALLOWED_MIME_TYPES,
+    assemble_scan_session,
+    delete_scan_page,
     generate_preview,
-    save_scan_as_pdf,
+    next_scan_page_number,
+    save_scan_page,
     save_upload,
+    scan_page_count,
+    scan_preview_path,
+    scan_session_dir,
 )
 from app.services.pricing import calculate_price
+from app.services.scanner import acquire_page
 
 router = APIRouter(tags=["Jobs"])
 
@@ -136,43 +169,135 @@ async def create_job(
     )
 
 
-@router.post("/scan", response_model=JobCreateResponse, status_code=201)
-async def create_scan_job(
+# ── Scan matériel : acquisition page par page depuis le scanner de la borne ───
+#
+# Les images ne viennent plus du client : le backend pilote le scanner branché
+# sur l'hôte de la borne et accumule les pages dans un dossier de travail
+# (`UPLOAD_DIR/scan-<scan_id>/`). Le job d'impression n'est créé qu'à la clôture,
+# entièrement formé, pour rejoindre le flux classique (config → prix → paiement).
+
+def _load_scan_meta(scan_dir: Path) -> dict:
+    """Charge les métadonnées d'une session de scan (lève 404 si absente)."""
+    meta_path = scan_dir / "meta.json"
+    if not meta_path.exists():
+        raise ScanSessionNotFoundError()
+    return json.loads(meta_path.read_text(encoding="utf-8"))
+
+
+@router.post("/scan/start", response_model=ScanStartResponse, status_code=201)
+async def start_scan(
     session_token: uuid.UUID = Form(...),
-    files: list[UploadFile] = File(...),
     grayscale: bool = Form(False),
     db: AsyncSession = Depends(get_db),
-) -> JobCreateResponse:
+) -> ScanStartResponse:
     """
-    Scan de document : assemble plusieurs photos de pages en un PDF imprimable.
-
-    L'usager photographie chaque page depuis son téléphone ; les images sont
-    envoyées ici dans l'ordre et combinées en un seul document multi-pages qui
-    rejoint le flux d'impression classique (config → prix → paiement).
-
-    - Valide la session
-    - Valide que chaque fichier est bien une image
-    - Assemble le PDF (option `grayscale` pour optimiser les documents texte)
-    - Génère un aperçu de la première page
-    - Crée le job en statut "en_creation"
+    Ouvre une session de scan. Valide la session borne et crée un dossier de
+    travail vide. Le choix N&B (`grayscale`) est figé pour tout le document.
     """
     session = await _get_valid_session(session_token, db)
 
-    if not files:
+    scan_id = uuid.uuid4()
+    scan_dir = scan_session_dir(scan_id)
+    scan_dir.mkdir(parents=True, exist_ok=True)
+
+    meta = {
+        "session_id": str(session.id),
+        "kiosk_id": str(session.kiosk_id),
+        "grayscale": grayscale,
+    }
+    (scan_dir / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+
+    return ScanStartResponse(scan_id=scan_id, pages=0)
+
+
+@router.post("/scan/{scan_id}/page", response_model=ScanPageResponse, status_code=201)
+async def scan_page(scan_id: uuid.UUID) -> ScanPageResponse:
+    """
+    Numérise UNE page sur le scanner de la borne et l'ajoute au document.
+
+    Le pilotage matériel peut lever ScannerUnavailableError (503) ou
+    ScanTimeoutError (504) ; le maximum de pages lève TooManyScanPagesError (413).
+    """
+    scan_dir = scan_session_dir(scan_id)
+    meta = _load_scan_meta(scan_dir)
+
+    if scan_page_count(scan_dir) >= settings.MAX_SCAN_PAGES:
+        raise TooManyScanPagesError(settings.MAX_SCAN_PAGES)
+
+    grayscale = bool(meta.get("grayscale", False))
+
+    # Acquisition matérielle (peut lever ScannerUnavailableError / ScanTimeoutError)
+    raw = await acquire_page(grayscale)
+
+    page_number = next_scan_page_number(scan_dir)
+    await save_scan_page(scan_dir, raw, grayscale, page_number)
+
+    return ScanPageResponse(
+        scan_id=scan_id,
+        page_number=page_number,
+        pages=scan_page_count(scan_dir),
+        page_preview_url=f"/jobs/scan/{scan_id}/page/{page_number}/preview",
+    )
+
+
+@router.get("/scan/{scan_id}/page/{page_number}/preview")
+async def get_scan_page_preview(scan_id: uuid.UUID, page_number: int) -> FileResponse:
+    """Retourne la vignette PNG d'une page numérisée."""
+    scan_dir = scan_session_dir(scan_id)
+    preview_path = scan_preview_path(scan_dir, page_number)
+
+    if not preview_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aperçu de page introuvable.",
+        )
+
+    return FileResponse(
+        path=str(preview_path),
+        media_type="image/png",
+        filename=f"scan-page-{page_number}.png",
+    )
+
+
+@router.delete("/scan/{scan_id}/page/{page_number}", response_model=ScanPagesResponse)
+async def remove_scan_page(scan_id: uuid.UUID, page_number: int) -> ScanPagesResponse:
+    """Retire une page mal numérisée (sans renumérotation des autres)."""
+    scan_dir = scan_session_dir(scan_id)
+    _load_scan_meta(scan_dir)  # 404 si la session n'existe pas
+
+    if not delete_scan_page(scan_dir, page_number):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page introuvable.",
+        )
+
+    return ScanPagesResponse(scan_id=scan_id, pages=scan_page_count(scan_dir))
+
+
+@router.post("/scan/{scan_id}/finish", response_model=JobCreateResponse, status_code=201)
+async def finish_scan(
+    scan_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> JobCreateResponse:
+    """
+    Clôture la session de scan : assemble le PDF, crée le job (statut
+    "en_creation") et nettoie le dossier de travail. Le job rejoint alors le flux
+    classique (config → prix → paiement).
+    """
+    scan_dir = scan_session_dir(scan_id)
+    meta = _load_scan_meta(scan_dir)
+
+    # Re-valide la session borne rattachée au scan
+    session = await _get_valid_session(uuid.UUID(meta["session_id"]), db)
+
+    if scan_page_count(scan_dir) == 0:
         raise EmptyScanError()
 
-    # Lecture + validation du type de chaque photo
-    images: list[bytes] = []
-    for upload in files:
-        mime = (upload.content_type or "").split(";")[0].strip()
-        if mime not in SCAN_ALLOWED_MIME_TYPES:
-            raise UnsupportedFileFormatError(mime or "inconnu")
-        images.append(await upload.read())
-
+    grayscale = bool(meta.get("grayscale", False))
     job_id = uuid.uuid4()
 
-    # Assemblage PDF + aperçu (lève EmptyScan / TooManyScanPages / FileTooLarge)
-    file_path, pages = await save_scan_as_pdf(images, job_id, grayscale)
+    # Assemble les pages accumulées en un PDF imprimable + aperçu
+    file_path, pages = await assemble_scan_session(scan_dir, job_id, grayscale)
 
     original_filename = "Document scanné.pdf"
 
@@ -188,6 +313,9 @@ async def create_scan_job(
     db.add(job)
     await db.flush()
 
+    # Nettoyage du dossier de travail (le PDF vit désormais dans le dossier du job)
+    shutil.rmtree(scan_dir, ignore_errors=True)
+
     return JobCreateResponse(
         job_id=job.id,
         original_filename=original_filename,
@@ -195,6 +323,13 @@ async def create_scan_job(
         status=job.status,
         preview_url=f"/jobs/{job_id}/preview",
     )
+
+
+@router.post("/scan/{scan_id}/cancel", status_code=204)
+async def cancel_scan(scan_id: uuid.UUID) -> Response:
+    """Abandonne une session de scan et supprime son dossier de travail."""
+    shutil.rmtree(scan_session_dir(scan_id), ignore_errors=True)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/{job_id}/config", response_model=JobStatusResponse)

@@ -36,10 +36,6 @@ ALLOWED_MIME_TYPES: dict[str, str] = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 }
 
-# ── Types image acceptés pour le scan (photos de pages) ───────────────────────
-SCAN_ALLOWED_MIME_TYPES: set[str] = {"image/jpeg", "image/png", "image/webp"}
-
-
 def _sanitize_filename(filename: str) -> str:
     """Supprime les caractères dangereux du nom de fichier."""
     # Garde uniquement alphanum, tirets, underscores, points
@@ -290,3 +286,104 @@ async def save_scan_as_pdf(
     )
 
     return str(pdf_path.resolve()), len(images)
+
+
+# ── Session de scan matériel (accumulation de pages sur disque) ────────────────
+#
+# Chaque page numérisée par le scanner de la borne est accumulée dans un dossier
+# de travail dédié `UPLOAD_DIR/scan-<scan_id>/` avant l'assemblage final :
+#   - page-<n>.img    : octets bruts de la page acquise
+#   - preview-<n>.png : vignette affichée à l'écran de la borne
+# La suppression d'une page laisse un « trou » dans la numérotation (pas de
+# renumérotation) : l'ordre est toujours donné par le numéro croissant, et
+# l'interface réétiquette les pages par position.
+
+
+def scan_session_dir(scan_id: uuid.UUID) -> Path:
+    """Dossier de travail d'une session de scan."""
+    return Path(settings.UPLOAD_DIR) / f"scan-{scan_id}"
+
+
+def _scan_page_number(path: Path) -> int:
+    """Extrait le numéro d'une page (`page-<n>.img`)."""
+    return int(path.stem.split("-", 1)[1])
+
+
+def list_scan_pages(scan_dir: Path) -> list[Path]:
+    """Chemins des pages accumulées, triés par numéro croissant."""
+    return sorted(scan_dir.glob("page-*.img"), key=_scan_page_number)
+
+
+def scan_page_count(scan_dir: Path) -> int:
+    """Nombre de pages actuellement accumulées."""
+    return len(list_scan_pages(scan_dir))
+
+
+def next_scan_page_number(scan_dir: Path) -> int:
+    """Prochain numéro de page (jamais réutilisé au sein d'une session)."""
+    pages = list_scan_pages(scan_dir)
+    return (_scan_page_number(pages[-1]) + 1) if pages else 1
+
+
+def scan_preview_path(scan_dir: Path, page_number: int) -> Path:
+    """Chemin de la vignette d'une page donnée."""
+    return scan_dir / f"preview-{page_number}.png"
+
+
+async def save_scan_page(
+    scan_dir: Path,
+    raw: bytes,
+    grayscale: bool,
+    page_number: int,
+) -> Path:
+    """
+    Sauvegarde une page acquise (octets bruts) + génère sa vignette d'aperçu.
+
+    Retourne le chemin de la vignette. Lève UnsupportedFileFormatError si l'image
+    acquise est illisible.
+    """
+    scan_dir.mkdir(parents=True, exist_ok=True)
+
+    page_path = scan_dir / f"page-{page_number}.img"
+    async with aiofiles.open(page_path, "wb") as f:
+        await f.write(raw)
+
+    # Vignette : image préparée (orientation + N&B éventuel) puis réduite
+    preview_path = scan_preview_path(scan_dir, page_number)
+    img = _prepare_scanned_page(raw, grayscale)
+    try:
+        img.thumbnail((800, 1200), Image.LANCZOS)
+        img.save(str(preview_path), "PNG")
+    finally:
+        img.close()
+
+    return preview_path
+
+
+def delete_scan_page(scan_dir: Path, page_number: int) -> bool:
+    """Supprime une page accumulée et sa vignette. False si la page n'existe pas."""
+    page_path = scan_dir / f"page-{page_number}.img"
+    if not page_path.exists():
+        return False
+    page_path.unlink(missing_ok=True)
+    scan_preview_path(scan_dir, page_number).unlink(missing_ok=True)
+    return True
+
+
+async def assemble_scan_session(
+    scan_dir: Path,
+    job_id: uuid.UUID,
+    grayscale: bool,
+) -> tuple[str, int]:
+    """
+    Assemble toutes les pages accumulées d'une session en un PDF imprimable.
+
+    Réutilise `save_scan_as_pdf` (source unique d'assemblage). Lève EmptyScanError
+    si aucune page n'a été numérisée.
+    """
+    page_paths = list_scan_pages(scan_dir)
+    if not page_paths:
+        raise EmptyScanError()
+
+    images = [p.read_bytes() for p in page_paths]
+    return await save_scan_as_pdf(images, job_id, grayscale)

@@ -63,6 +63,23 @@ export interface JobStatusResponse {
   withdrawal_code: string | null;
 }
 
+export interface ScanStartResponse {
+  scan_id: string;
+  pages: number;
+}
+
+export interface ScanPageResponse {
+  scan_id: string;
+  page_number: number;
+  pages: number;
+  page_preview_url: string;
+}
+
+export interface ScanPagesResponse {
+  scan_id: string;
+  pages: number;
+}
+
 export interface PaymentInitiateResponse {
   payment_id: string;
   status: string;
@@ -108,25 +125,51 @@ export const api = {
     });
   },
 
-  // Scan de document : envoie les photos de pages (dans l'ordre) au backend,
-  // qui les assemble en un unique PDF imprimable.
-  async scanDocument(
-    sessionToken: string,
-    pages: File[],
-    grayscale: boolean
-  ): Promise<JobCreateResponse> {
+  // ── Scan matériel : acquisition page par page depuis le scanner de la borne ──
+
+  // Ouvre une session de scan (le choix N&B est figé pour tout le document)
+  async scanStart(sessionToken: string, grayscale: boolean): Promise<ScanStartResponse> {
     const formData = new FormData();
     formData.append("session_token", sessionToken);
     formData.append("grayscale", grayscale ? "true" : "false");
-    // Champ répété "files" : l'ordre d'ajout est conservé côté backend
-    for (const page of pages) {
-      formData.append("files", page);
-    }
 
-    return request<JobCreateResponse>("/jobs/scan", {
+    return request<ScanStartResponse>("/jobs/scan/start", {
       method: "POST",
       body: formData,
     });
+  },
+
+  // Numérise UNE page sur le scanner et l'ajoute au document
+  async scanPage(scanId: string): Promise<ScanPageResponse> {
+    return request<ScanPageResponse>(`/jobs/scan/${scanId}/page`, {
+      method: "POST",
+    });
+  },
+
+  // Retire une page mal numérisée
+  async scanDeletePage(scanId: string, pageNumber: number): Promise<ScanPagesResponse> {
+    return request<ScanPagesResponse>(`/jobs/scan/${scanId}/page/${pageNumber}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Clôture : assemble le PDF et crée le job d'impression
+  async scanFinish(scanId: string): Promise<JobCreateResponse> {
+    return request<JobCreateResponse>(`/jobs/scan/${scanId}/finish`, {
+      method: "POST",
+    });
+  },
+
+  // Abandonne la session de scan (best-effort, ex: sortie de l'écran)
+  async scanCancel(scanId: string): Promise<void> {
+    await fetch(`${API_BASE_URL}/jobs/scan/${scanId}/cancel`, { method: "POST" }).catch(
+      () => undefined
+    );
+  },
+
+  // URL absolue de la vignette d'une page numérisée
+  scanPagePreviewUrl(scanId: string, pageNumber: number): string {
+    return `${API_BASE_URL}/jobs/scan/${scanId}/page/${pageNumber}/preview`;
   },
 
   // Configure l'impression

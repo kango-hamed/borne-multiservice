@@ -29,6 +29,30 @@ class JobCreateResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ScanStartResponse(BaseModel):
+    """Retourné à l'ouverture d'une session de scan — POST /jobs/scan/start"""
+    scan_id: uuid.UUID
+    pages: int
+
+    model_config = {"from_attributes": True}
+
+
+class ScanPageResponse(BaseModel):
+    """Retourné après numérisation d'une page — POST /jobs/scan/{id}/page"""
+    scan_id: uuid.UUID
+    page_number: int
+    pages: int
+    page_preview_url: str
+
+    model_config = {"from_attributes": True}
+
+
+class ScanPagesResponse(BaseModel):
+    """Retourné après suppression d'une page — DELETE /jobs/scan/{id}/page/{n}"""
+    scan_id: uuid.UUID
+    pages: int
+
+
 class JobStatusResponse(BaseModel):
     """Réponse légère pour le polling — GET /jobs/{id}"""
     job_id: uuid.UUID

@@ -106,7 +106,7 @@ export default function UploadPage() {
           </div>
           <div className="min-w-0">
             <p className="font-bold text-base">Scanner un document</p>
-            <p className="text-xs text-accent/80 mt-0.5">{"Photographiez vos pages avec l'appareil photo"}</p>
+            <p className="text-xs text-accent/80 mt-0.5">{"Numérisez vos pages sur le scanner de la borne"}</p>
           </div>
           <svg className="w-5 h-5 ml-auto text-white/70 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
