@@ -21,7 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import admin, jobs, kiosks, payments, sessions
+from app.routers import admin, jobs, kiosks, payments, sessions, scan
 from app.workers.print_queue_worker import print_queue_worker
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -97,6 +97,7 @@ app.include_router(jobs.router, prefix="/jobs")
 app.include_router(payments.router, prefix="/payments")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(kiosks.router, prefix="/kiosks")
+app.include_router(scan.router, prefix="/scan")
 
 
 # ── Endpoint de debug (dev uniquement) ───────────────────────────────────────

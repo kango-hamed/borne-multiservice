@@ -115,3 +115,61 @@ class JobNotReadyForWithdrawalError(HTTPException):
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Le document n'est pas encore prêt à être retiré (statut actuel : {current_status}).",
         )
+
+
+# ── Scan WIA ──────────────────────────────────────────────────────────────────
+
+class ScanSessionNotFoundError(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session de scan introuvable.",
+        )
+
+
+class ScanSessionClosedError(HTTPException):
+    """Session déjà terminée ou annulée — on ne peut plus acquérir."""
+    def __init__(self, current_status: str):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Session de scan non modifiable (statut : {current_status}).",
+        )
+
+
+class ScanSessionBusyError(HTTPException):
+    """Une acquisition est déjà en cours sur cette session (double-clic agent)."""
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Une acquisition est déjà en cours. Attendez la fin avant d'en déclencher une nouvelle.",
+        )
+
+
+class ScanNoPageError(HTTPException):
+    """Finalize appelé sans aucune page acquise."""
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Aucune page n'a été scannée. Acquérez au moins une page avant de finaliser.",
+        )
+
+
+class ScannerNotFoundError(HTTPException):
+    """WIA n'a trouvé aucun scanner connecté et allumé."""
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Aucun scanner détecté. Vérifiez que le scanner est allumé "
+                "et correctement connecté à la borne."
+            ),
+        )
+
+
+class ScanAcquisitionError(HTTPException):
+    """Erreur WIA pendant l'acquisition (bourrage, vitre sale, timeout…)."""
+    def __init__(self, detail: str = "Erreur lors de l'acquisition. Vérifiez le scanner et réessayez."):
+        super().__init__(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=detail,
+        )
