@@ -21,6 +21,7 @@ if (-not (Test-Path ".\.venv")) {
 # Utilisation directe des exécutables du venv (évite les bugs d'activation sous PowerShell)
 $venvPip = ".\.venv\Scripts\pip.exe"
 $venvUvicorn = ".\.venv\Scripts\uvicorn.exe"
+$venvPython = ".\.venv\Scripts\python.exe"
 
 # Installation des dépendances
 Write-Host "Installation des dépendances..." -ForegroundColor Yellow
@@ -51,6 +52,10 @@ if (Test-Path $venvAlembic) {
 } else {
     Write-Host "AVERTISSEMENT : alembic introuvable, les migrations n'ont pas été appliquées." -ForegroundColor Red
 }
+
+# Exécution du seed afin d'avoir des données de test
+Write-Host "Exécution et remplissage de données" -ForegroundColor Yellow
+& $venvPython -m app.seed
 
 # Lancement du serveur
 Write-Host "Démarrage de l'API..." -ForegroundColor Green

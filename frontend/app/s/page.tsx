@@ -26,7 +26,7 @@ function SessionInitContent() {
       .createSession(kioskId)
       .then((data) => {
         setSession(data.session_token, kioskId, data.kiosk_name);
-        router.replace("/flow/upload");
+        router.replace("/flow/service");
       })
       .catch((err) => {
         console.error("Impossible d'initialiser la session:", err);

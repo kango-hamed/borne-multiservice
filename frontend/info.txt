@@ -1,0 +1,26 @@
+"Trouver une borne" (Carte) sert uniquement à localiser la borne physique la plus proche de toi. Tu ouvres la carte depuis chez toi pour savoir où aller.
+"Scanner un QR code" s'utilise une fois que tu es physiquement devant la borne. L'écran de la borne affichera un QR code géant. En le scannant avec ton téléphone, ton téléphone se connecte instantanément à cette borne précise et la session commence
+
+Pour la **plateforme web actuelle** (le code frontend Next.js et backend Python que nous sommes en train de développer), voici 5 fonctionnalités logicielles très puissantes qui la feraient passer à un niveau supérieur :
+
+### 1. ☁️ Intégration Cloud & Bot WhatsApp (Acquisition de fichiers)
+Actuellement, l'utilisateur doit avoir le fichier dans la mémoire de son téléphone.
+* **L'idée** : Ajouter des boutons "Importer depuis Google Drive" ou "Importer depuis Dropbox" sur la page d'upload. Encore plus fort pour l'Afrique : un **Bot WhatsApp**. L'utilisateur envoie son PDF au numéro WhatsApp de l'entreprise, le bot lui répond avec un code à 6 chiffres. Arrivé sur la plateforme web, il tape le code et son fichier est directement chargé !
+
+### 2. 👁️ Aperçu interactif du document avant paiement (Prévisualisation)
+* **L'idée** : Après l'upload ou le scan, afficher un lecteur visuel (slider) permettant à l'utilisateur de feuilleter virtuellement son document, de recadrer manuellement les bords (surtout s'il a utilisé la caméra pour scanner), ou de supprimer une page ratée.
+* **Pourquoi ?** Cela rassure énormément l'utilisateur sur ce qu'il va payer et réduit les demandes de remboursement pour "mauvaise impression".
+
+### 3. ⏱️ Algorithme de prédiction du temps d'attente (Gestion de file)
+Sur la page `/flow/queue`, il est angoissant d'attendre sans savoir pour combien de temps on en a.
+* **L'idée** : Le backend analyse non seulement le nombre de personnes avant l'utilisateur, mais aussi **le poids et le nombre de pages** des jobs en attente. La plateforme affiche alors : *"2 documents en cours d'impression avant vous. Temps d'attente estimé : 3 minutes et 40 secondes"*.
+
+### 4. 📱 Progressive Web App (PWA) & Préparation Hors Ligne
+* **L'idée** : Transformer le site web actuel en PWA (installable sur l'écran d'accueil du téléphone comme une vraie application, sans passer par le Play Store/App Store).
+* **Le gros plus** : L'utilisateur peut préparer toute sa commande (upload du fichier, choix couleur/N&B, cadrage) depuis chez lui en Wi-Fi. L'app sauvegarde la configuration en cache. Une fois devant la borne (même avec une très mauvaise connexion 4G), il n'a plus qu'à scanner le QR code pour déclencher le paiement et l'impression instantanément.
+
+### 5. 💼 Portefeuille numérique et Historique (Fidélisation)
+Actuellement, il n'y a pas de compte utilisateur, tout est anonyme via la session.
+* **L'idée** : Permettre de créer un compte. Cela débloque deux choses :
+  - **Un historique** : "Réimprimer le document d'hier en 1 clic".
+  - **Un Wallet (Portefeuille)** : Au lieu de payer par Mobile Money 50 FCFA à chaque fois (ce qui peut générer des frais réseau pénibles), l'utilisateur recharge 2000 FCFA d'un coup sur son compte "Borne Multiservice" et utilise ce crédit fluide pour ses impressions de la semaine.

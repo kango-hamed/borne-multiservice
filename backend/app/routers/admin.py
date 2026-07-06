@@ -114,6 +114,61 @@ async def get_kiosk_queue(
     )
 
 
+HISTORY_STATUSES = ("recupere",)
+
+@router.get("/kiosks/{kiosk_id}/history", response_model=KioskQueueResponse)
+async def get_kiosk_history(
+    kiosk_id: uuid.UUID,
+    x_agent_pin: str = Header(..., alias="X-Agent-Pin"),
+    db: AsyncSession = Depends(get_db),
+) -> KioskQueueResponse:
+    """
+    Retourne l'historique des documents traités par la borne (50 derniers).
+    Authentification : PIN agent.
+    """
+    result = await db.execute(select(Kiosk).where(Kiosk.id == kiosk_id))
+    kiosk = result.scalar_one_or_none()
+    if kiosk is None:
+        raise KioskNotFoundError(str(kiosk_id))
+
+    await _verify_agent(kiosk_id, x_agent_pin, db)
+
+    jobs_result = await db.execute(
+        select(PrintJob)
+        .where(
+            PrintJob.kiosk_id == kiosk_id,
+            PrintJob.status.in_(HISTORY_STATUSES),
+        )
+        .order_by(PrintJob.created_at.desc())
+        .limit(50)
+    )
+    jobs = jobs_result.scalars().all()
+
+    queue_items = [
+        QueueJobItem(
+            job_id=job.id,
+            original_filename=job.original_filename,
+            pages=job.pages,
+            copies=job.copies,
+            color_mode=job.color_mode,
+            duplex=job.duplex,
+            price_fcfa=job.price_fcfa,
+            status=job.status,
+            withdrawal_code=job.withdrawal_code,
+            created_at=job.created_at,
+            queue_position=0, # Pas de position dans l'historique
+        )
+        for job in jobs
+    ]
+
+    return KioskQueueResponse(
+        kiosk_id=kiosk_id,
+        kiosk_name=kiosk.name,
+        jobs=queue_items,
+        total=len(queue_items),
+    )
+
+
 @router.post("/jobs/{job_id}/withdraw", response_model=WithdrawResponse)
 async def withdraw_job(
     job_id: uuid.UUID,
