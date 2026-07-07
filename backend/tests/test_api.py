@@ -112,33 +112,39 @@ async def test_job_upload_and_config(client: AsyncClient, db: AsyncSession):
     assert config_res["price_fcfa"] == 100
 
 
-def _make_png(color: tuple[int, int, int]) -> bytes:
-    """Génère une petite image PNG en mémoire pour simuler une page photographiée."""
-    from PIL import Image
-
-    buf = io.BytesIO()
-    Image.new("RGB", (200, 280), color=color).save(buf, "PNG")
-    return buf.getvalue()
-
-
 async def test_scan_document(client: AsyncClient, db: AsyncSession):
-    """Vérifie l'assemblage de plusieurs photos de pages en un PDF via /jobs/scan."""
+    """Scan matériel page par page (backend stub) : start → 2× page → finish."""
     kiosk_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     sess_resp = await client.post("/sessions", json={"kiosk_id": kiosk_id})
     session_token = sess_resp.json()["session_token"]
 
-    # 2 pages photographiées, envoyées dans l'ordre sous le même champ "files"
-    files = [
-        ("files", ("page1.png", io.BytesIO(_make_png((255, 255, 255))), "image/png")),
-        ("files", ("page2.png", io.BytesIO(_make_png((200, 200, 200))), "image/png")),
-    ]
-    scan_resp = await client.post(
-        "/jobs/scan",
+    # Ouverture de la session de scan (document en N&B)
+    start_resp = await client.post(
+        "/jobs/scan/start",
         data={"session_token": session_token, "grayscale": "true"},
-        files=files,
     )
-    assert scan_resp.status_code == 201
-    job_data = scan_resp.json()
+    assert start_resp.status_code == 201
+    scan_id = start_resp.json()["scan_id"]
+    assert start_resp.json()["pages"] == 0
+
+    # Numérisation de 2 pages (le scanner stub renvoie une page synthétique)
+    page1 = await client.post(f"/jobs/scan/{scan_id}/page")
+    assert page1.status_code == 201
+    assert page1.json()["page_number"] == 1
+    assert page1.json()["pages"] == 1
+
+    # La vignette de la page numérisée est disponible immédiatement
+    page_preview = await client.get(f"/jobs/scan/{scan_id}/page/1/preview")
+    assert page_preview.status_code == 200
+    assert page_preview.headers["content-type"] == "image/png"
+
+    page2 = await client.post(f"/jobs/scan/{scan_id}/page")
+    assert page2.json()["pages"] == 2
+
+    # Clôture : assemblage du PDF + création du job
+    finish_resp = await client.post(f"/jobs/scan/{scan_id}/finish")
+    assert finish_resp.status_code == 201
+    job_data = finish_resp.json()
     assert job_data["pages"] == 2
     assert job_data["original_filename"] == "Document scanné.pdf"
     assert job_data["status"] == "en_creation"
@@ -160,19 +166,49 @@ async def test_scan_document(client: AsyncClient, db: AsyncSession):
     assert config_resp.json()["price_fcfa"] == 100
 
 
-async def test_scan_rejects_non_image(client: AsyncClient):
-    """Un fichier non-image envoyé à /jobs/scan doit être refusé (415)."""
+async def test_scan_finish_requires_page(client: AsyncClient):
+    """Clôturer un scan sans aucune page numérisée doit échouer (422)."""
     kiosk_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     sess_resp = await client.post("/sessions", json={"kiosk_id": kiosk_id})
     session_token = sess_resp.json()["session_token"]
 
-    files = [("files", ("notes.pdf", io.BytesIO(b"%PDF-1.4 pas une image"), "application/pdf"))]
-    scan_resp = await client.post(
-        "/jobs/scan",
+    start_resp = await client.post(
+        "/jobs/scan/start",
         data={"session_token": session_token, "grayscale": "false"},
-        files=files,
     )
-    assert scan_resp.status_code == 415
+    scan_id = start_resp.json()["scan_id"]
+
+    finish_resp = await client.post(f"/jobs/scan/{scan_id}/finish")
+    assert finish_resp.status_code == 422
+
+
+async def test_scan_delete_page(client: AsyncClient):
+    """La suppression d'une page mal numérisée réduit le compteur de pages."""
+    kiosk_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    sess_resp = await client.post("/sessions", json={"kiosk_id": kiosk_id})
+    session_token = sess_resp.json()["session_token"]
+
+    start_resp = await client.post(
+        "/jobs/scan/start",
+        data={"session_token": session_token, "grayscale": "true"},
+    )
+    scan_id = start_resp.json()["scan_id"]
+
+    await client.post(f"/jobs/scan/{scan_id}/page")
+    await client.post(f"/jobs/scan/{scan_id}/page")
+
+    del_resp = await client.delete(f"/jobs/scan/{scan_id}/page/1")
+    assert del_resp.status_code == 200
+    assert del_resp.json()["pages"] == 1
+
+    # Supprimer une page inexistante renvoie 404
+    del_missing = await client.delete(f"/jobs/scan/{scan_id}/page/99")
+    assert del_missing.status_code == 404
+
+    # Le document se clôture avec la page restante
+    finish_resp = await client.post(f"/jobs/scan/{scan_id}/finish")
+    assert finish_resp.status_code == 201
+    assert finish_resp.json()["pages"] == 1
 
 
 async def test_payment_and_admin_withdrawal(client: AsyncClient, db: AsyncSession):

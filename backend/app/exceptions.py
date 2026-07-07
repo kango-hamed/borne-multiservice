@@ -85,6 +85,30 @@ class TooManyScanPagesError(HTTPException):
         )
 
 
+class ScanSessionNotFoundError(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session de scan introuvable ou déjà clôturée.",
+        )
+
+
+class ScannerUnavailableError(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scanner indisponible. Vérifiez qu'il est allumé et connecté à la borne.",
+        )
+
+
+class ScanTimeoutError(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Aucune page reçue du scanner dans le délai imparti. Réessayez.",
+        )
+
+
 class PaymentAlreadyConfirmedError(HTTPException):
     def __init__(self):
         super().__init__(
