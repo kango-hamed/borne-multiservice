@@ -74,10 +74,22 @@ async def process_payment_confirmation(
 
         # Met à jour le statut du job selon le résultat du paiement
         if status == "confirme":
-            job.status = "paye"
+            # Si le job est associé à une session de scan, on le passe directement en "pret_a_retirer"
+            # car il n'a pas besoin d'être imprimé physiquement
+            from app.models.scan_session import ScanSession
+            scan_sess_result = await db.execute(
+                select(ScanSession).where(ScanSession.print_job_id == job.id)
+            )
+            is_scan = scan_sess_result.scalar_one_or_none() is not None
+
+            if is_scan:
+                job.status = "pret_a_retirer"
+            else:
+                job.status = "paye"
             job.withdrawal_code = _generate_withdrawal_code()
             logger.info(
                 f"Paiement confirmé — job={job.id} | "
+                f"status={job.status} | "
                 f"code_retrait={job.withdrawal_code} | "
                 f"txn={provider_transaction_id}"
             )

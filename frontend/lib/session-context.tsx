@@ -13,7 +13,7 @@ export interface FileMetadata {
   previewUrl?: string;
 }
 
-export type ServiceType = "impression" | "photocopie";
+export type ServiceType = "impression" | "photocopie" | "scan";
 
 interface SessionContextType {
   sessionToken: string | null;

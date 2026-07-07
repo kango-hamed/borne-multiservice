@@ -107,9 +107,9 @@ async def test_job_upload_and_config(client: AsyncClient, db: AsyncSession):
     config_res = config_resp.json()
     assert config_res["status"] == "attente_paiement"
     # Prix attendu : 2 copies, nb, duplex.
-    # Dans pricing.py: nb_recto_verso = 80 FCFA/feuille.
-    # 1 page en duplex = 1 feuille. 2 copies = 2 feuilles. Total = 160 FCFA.
-    assert config_res["price_fcfa"] == 160
+    # Dans pricing.py: nb_recto_verso = 50 FCFA/feuille.
+    # 1 page en duplex = 1 feuille. 2 copies = 2 feuilles. Total = 100 FCFA.
+    assert config_res["price_fcfa"] == 100
 
 
 def _make_png(color: tuple[int, int, int]) -> bytes:
@@ -231,3 +231,29 @@ async def test_payment_and_admin_withdrawal(client: AsyncClient, db: AsyncSessio
     withdraw_resp = await client.post(f"/admin/jobs/{job_id}/withdraw", json=withdraw_data)
     assert withdraw_resp.status_code == 200
     assert withdraw_resp.json()["status"] == "recupere"
+
+
+async def test_job_download(client: AsyncClient, db: AsyncSession):
+    """Vérifie l'endpoint /jobs/{id}/download pour télécharger le document source."""
+    # 1. Crée une session active
+    kiosk_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    sess_resp = await client.post("/sessions", json={"kiosk_id": kiosk_id})
+    session_token = sess_resp.json()["session_token"]
+
+    # 2. Upload fichier PDF
+    file_content = b"%PDF-1.4 test download pdf content"
+    files = {"file": ("test_doc.pdf", io.BytesIO(file_content), "application/pdf")}
+    data = {"session_token": session_token}
+
+    upload_resp = await client.post("/jobs", data=data, files=files)
+    assert upload_resp.status_code == 201
+    job_id = upload_resp.json()["job_id"]
+
+    # 3. Téléchargement
+    download_resp = await client.get(f"/jobs/{job_id}/download")
+    assert download_resp.status_code == 200
+    assert download_resp.headers["content-type"] == "application/pdf"
+    assert "attachment" in download_resp.headers["content-disposition"]
+    assert "test_doc.pdf" in download_resp.headers["content-disposition"]
+    assert download_resp.content == file_content
+

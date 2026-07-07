@@ -2,7 +2,7 @@
 scan.py — Schémas Pydantic pour le router /scan/*.
 
 Conventions :
-  - Les requêtes contiennent toujours agent_pin pour authentifier l'agent.
+  - Accès libre (réseau local de la borne) — pas d'authentification requise.
   - Les réponses incluent la liste des pages acquises (numéro + preview_url).
 """
 import uuid
@@ -25,26 +25,9 @@ class ScannedPageInfo(BaseModel):
 class ScanSessionCreate(BaseModel):
     """Corps de POST /scan/sessions — création d'une session de scan."""
     kiosk_id: uuid.UUID
-    agent_pin: str
-    # session usager optionnelle (absente pour les photocopies sans QR scan)
-    session_id: uuid.UUID | None = None
     color_mode: Literal["nb", "couleur"] = "nb"
     resolution: Literal[150, 200, 300] = 200
 
-
-class ScanFinalizeRequest(BaseModel):
-    """Corps de POST /scan/sessions/{id}/finalize."""
-    agent_pin: str
-
-
-class ScanCancelRequest(BaseModel):
-    """Corps de DELETE /scan/sessions/{id}."""
-    agent_pin: str
-
-
-class ScanDeletePageRequest(BaseModel):
-    """Corps de DELETE /scan/sessions/{id}/pages/{n}."""
-    agent_pin: str
 
 
 # ── Réponses ──────────────────────────────────────────────────────────────────
