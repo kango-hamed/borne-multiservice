@@ -1,0 +1,214 @@
+<h2 class="sr-only">Maquette interactive de la borne multiservice, style distributeur automatique, une étape par écran</h2>
+<style>
+.bm-btn{transition:transform .1s}
+.bm-btn:active{transform:scale(0.97)}
+.bm-opt{display:flex;align-items:center;gap:12px;width:100%;padding:16px;border-radius:12px;border:0.5px solid #D8DBEE;background:#FFFFFF;cursor:pointer;text-align:left}
+.bm-opt.sel{border:2px solid #16A38A;background:#EAF7F3}
+.bm-opt:disabled{opacity:0.45;cursor:not-allowed}
+.bm-stepper{display:flex;align-items:center;gap:14px;justify-content:center;padding:10px 0}
+.bm-stepper button{width:44px;height:44px;border-radius:10px;border:0.5px solid #D8DBEE;background:#F5F6FA;font-size:18px}
+</style>
+<div style="max-width:340px;margin:0 auto;background:#0B0B14;border-radius:28px;padding:10px;">
+<div style="background:#F5F6FA;border-radius:20px;overflow:hidden;min-height:560px;display:flex;flex-direction:column;font-family:var(--font-sans);">
+
+<div style="background:#1E2258;padding:16px 16px 12px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <button id="bm-back" onclick="bmBack()" aria-label="Retour" style="background:none;border:none;color:#B8BCE0;font-size:20px;padding:4px;width:32px" ><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span style="color:#FFFFFF;font-size:14px;font-weight:500">Borne Cocody Riviera</span>
+    <button onclick="bmGoto(0)" style="background:none;border:none;color:#B8BCE0;font-size:13px;padding:4px">Annuler</button>
+  </div>
+  <div class="bm-stepper" id="bm-dots" style="padding-top:10px;gap:6px"></div>
+</div>
+
+<div id="bm-content" style="flex:1;padding:24px 20px;display:flex;flex-direction:column;gap:16px"></div>
+
+<div style="padding:16px 20px 20px;">
+  <button id="bm-cta" onclick="bmNext()" class="bm-btn" style="width:100%;height:56px;border-radius:14px;border:none;background:#16A38A;color:#FFFFFF;font-size:16px;font-weight:500">Commencer</button>
+</div>
+
+</div>
+</div>
+
+<script>
+const bmSteps = ['bienvenue','service','import','reglages','paiement','retrait'];
+let bmStep = 0;
+let bmSettings = { copies: 1, couleur: false, rectoverso: false };
+
+function bmDots(){
+  const el = document.getElementById('bm-dots');
+  el.innerHTML = bmSteps.map((s,i)=>{
+    const active = i===bmStep;
+    const done = i<bmStep;
+    const bg = active ? '#16A38A' : (done ? '#5DCAA5' : '#3A3E72');
+    return `<span style="width:${active?18:7}px;height:7px;border-radius:4px;background:${bg};display:inline-block;transition:width .2s"></span>`;
+  }).join('');
+}
+
+function bmBack(){ if(bmStep>0){ bmStep--; bmRender(); } }
+function bmGoto(i){ bmStep=i; bmRender(); }
+function bmNext(){ if(bmStep<bmSteps.length-1){ bmStep++; bmRender(); } }
+
+function bmPrice(){
+  let base = 50;
+  if(bmSettings.couleur) base += 50;
+  if(bmSettings.rectoverso) base += 20;
+  return base * bmSettings.copies;
+}
+
+function bmRender(){
+  document.getElementById('bm-back').style.visibility = bmStep===0 ? 'hidden' : 'visible';
+  bmDots();
+  const c = document.getElementById('bm-content');
+  const cta = document.getElementById('bm-cta');
+  const step = bmSteps[bmStep];
+
+  if(step==='bienvenue'){
+    c.innerHTML = `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center">
+        <div style="width:88px;height:88px;border-radius:20px;background:#1E2258;display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-printer" style="font-size:40px;color:#FFFFFF" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p style="font-size:18px;font-weight:500;margin:0 0 4px;color:#1B1B2E">Borne Cocody Riviera</p>
+          <span style="display:inline-flex;align-items:center;gap:6px;background:#EAF7F3;color:#0F6E56;font-size:13px;padding:4px 12px;border-radius:20px">
+            <i class="ti ti-circle-filled" style="font-size:8px" aria-hidden="true"></i>Borne active
+          </span>
+        </div>
+        <p style="font-size:14px;color:#6B6E8C;margin:0;max-width:220px">Impression, photocopie et scan depuis votre téléphone.</p>
+      </div>`;
+    cta.textContent = 'Commencer';
+  }
+
+  if(step==='service'){
+    c.innerHTML = `
+      <p style="font-size:16px;font-weight:500;margin:0 0 4px;color:#1B1B2E">Que souhaitez-vous faire ?</p>
+      <button class="bm-opt sel" style="height:76px">
+        <i class="ti ti-printer" style="font-size:26px;color:#16A38A" aria-hidden="true"></i>
+        <span style="flex:1">
+          <p style="margin:0;font-size:15px;font-weight:500;color:#1B1B2E">Impression</p>
+          <p style="margin:0;font-size:13px;color:#6B6E8C">À partir de 50 FCFA</p>
+        </span>
+        <i class="ti ti-check" style="font-size:20px;color:#16A38A" aria-hidden="true"></i>
+      </button>
+      <button class="bm-opt" disabled style="height:76px">
+        <i class="ti ti-copy" style="font-size:26px;color:#B4B2A9" aria-hidden="true"></i>
+        <span style="flex:1">
+          <p style="margin:0;font-size:15px;font-weight:500;color:#8B8DA6">Photocopie</p>
+          <p style="margin:0;font-size:13px;color:#B0B2C4">Bientôt disponible</p>
+        </span>
+      </button>`;
+    cta.textContent = 'Continuer';
+  }
+
+  if(step==='import'){
+    c.innerHTML = `
+      <p style="font-size:16px;font-weight:500;margin:0 0 4px;color:#1B1B2E">Ajoutez votre document</p>
+      <button class="bm-opt sel" style="height:84px">
+        <i class="ti ti-camera" style="font-size:26px;color:#16A38A" aria-hidden="true"></i>
+        <span>
+          <p style="margin:0;font-size:15px;font-weight:500;color:#1B1B2E">Prendre une photo</p>
+          <p style="margin:0;font-size:13px;color:#6B6E8C">Avec l'appareil photo</p>
+        </span>
+      </button>
+      <button class="bm-opt" style="height:84px">
+        <i class="ti ti-upload" style="font-size:26px;color:#5F5E5A" aria-hidden="true"></i>
+        <span>
+          <p style="margin:0;font-size:15px;font-weight:500;color:#1B1B2E">Choisir un fichier</p>
+          <p style="margin:0;font-size:13px;color:#6B6E8C">PDF, JPG, PNG ou DOCX</p>
+        </span>
+      </button>`;
+    cta.textContent = 'Continuer';
+  }
+
+  if(step==='reglages'){
+    c.innerHTML = `
+      <p style="font-size:16px;font-weight:500;margin:0 0 4px;color:#1B1B2E">Réglages d'impression</p>
+      <div style="background:#FFFFFF;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border:0.5px solid #D8DBEE">
+        <span style="font-size:14px;color:#1B1B2E">Copies</span>
+        <div style="display:flex;align-items:center;gap:14px">
+          <button onclick="bmCopies(-1)" style="width:32px;height:32px;border-radius:8px;border:0.5px solid #D8DBEE;background:#F5F6FA;font-size:16px"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <span id="bm-copies-val" style="font-size:16px;font-weight:500;min-width:16px;text-align:center">1</span>
+          <button onclick="bmCopies(1)" style="width:32px;height:32px;border-radius:8px;border:0.5px solid #D8DBEE;background:#F5F6FA;font-size:16px"><i class="ti ti-plus" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border-radius:12px;padding:14px 16px;border:0.5px solid #D8DBEE">
+        <p style="font-size:14px;margin:0 0 10px;color:#1B1B2E">Couleur</p>
+        <div style="display:flex;gap:8px">
+          <button onclick="bmToggle('couleur',false)" id="bm-nb" style="flex:1;height:40px;border-radius:10px;border:0.5px solid #D8DBEE;background:#FFFFFF;font-size:13px">Noir et blanc</button>
+          <button onclick="bmToggle('couleur',true)" id="bm-couleur" style="flex:1;height:40px;border-radius:10px;border:0.5px solid #D8DBEE;background:#F5F6FA;font-size:13px">Couleur (+50)</button>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border-radius:12px;padding:14px 16px;border:0.5px solid #D8DBEE">
+        <p style="font-size:14px;margin:0 0 10px;color:#1B1B2E">Recto-verso</p>
+        <div style="display:flex;gap:8px">
+          <button onclick="bmToggle('rectoverso',false)" id="bm-rv-non" style="flex:1;height:40px;border-radius:10px;border:0.5px solid #D8DBEE;background:#F5F6FA;font-size:13px">Non</button>
+          <button onclick="bmToggle('rectoverso',true)" id="bm-rv-oui" style="flex:1;height:40px;border-radius:10px;border:0.5px solid #D8DBEE;background:#FFFFFF;font-size:13px">Oui (+20)</button>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:14px;color:#6B6E8C;margin:4px 0 0">Total <span id="bm-price" style="font-weight:500;color:#1B1B2E">50 FCFA</span></p>`;
+    cta.textContent = 'Voir le récapitulatif';
+    bmUpdateSettingsUI();
+  }
+
+  if(step==='paiement'){
+    c.innerHTML = `
+      <p style="font-size:16px;font-weight:500;margin:0 0 4px;color:#1B1B2E">Récapitulatif</p>
+      <div style="background:#FFFFFF;border-radius:12px;padding:16px;border:0.5px solid #D8DBEE;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:#1B1B2E"><span>Impression x${bmSettings.copies}</span><span>${bmSettings.couleur?'Couleur':'N&B'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:#6B6E8C"><span>Recto-verso</span><span>${bmSettings.rectoverso?'Oui':'Non'}</span></div>
+        <div style="border-top:0.5px solid #EDEFF7;margin-top:4px;padding-top:8px;display:flex;justify-content:space-between;font-size:16px;font-weight:500;color:#1B1B2E"><span>Total</span><span>${bmPrice()} FCFA</span></div>
+      </div>
+      <p style="font-size:14px;color:#6B6E8C;margin:8px 0 0">Choisissez votre moyen de paiement</p>
+      <button class="bm-opt sel" style="height:60px"><i class="ti ti-device-mobile" style="font-size:22px;color:#16A38A" aria-hidden="true"></i><span style="font-size:15px;font-weight:500;color:#1B1B2E">Orange Money</span></button>
+      <button class="bm-opt" style="height:60px"><i class="ti ti-device-mobile" style="font-size:22px;color:#5F5E5A" aria-hidden="true"></i><span style="font-size:15px;font-weight:500;color:#1B1B2E">MTN Mobile Money</span></button>
+      <button class="bm-opt" style="height:60px"><i class="ti ti-device-mobile" style="font-size:22px;color:#5F5E5A" aria-hidden="true"></i><span style="font-size:15px;font-weight:500;color:#1B1B2E">Wave</span></button>`;
+    cta.textContent = `Payer ${bmPrice()} FCFA`;
+  }
+
+  if(step==='retrait'){
+    c.innerHTML = `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center">
+        <div style="width:88px;height:88px;border-radius:50%;background:#EAF7F3;display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-check" style="font-size:40px;color:#16A38A" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p style="font-size:18px;font-weight:500;margin:0 0 4px;color:#1B1B2E">Paiement confirmé</p>
+          <p style="font-size:14px;color:#6B6E8C;margin:0;max-width:220px">Votre document est en cours d'impression. Récupérez-le au bac de sortie de la borne.</p>
+        </div>
+      </div>`;
+    cta.textContent = 'Nouvelle opération';
+    cta.onclick = () => bmGoto(0);
+  }
+  if(step!=='retrait'){ cta.onclick = bmNext; }
+}
+
+function bmCopies(delta){
+  bmSettings.copies = Math.max(1, Math.min(20, bmSettings.copies+delta));
+  document.getElementById('bm-copies-val').textContent = bmSettings.copies;
+  bmUpdateSettingsUI();
+}
+function bmToggle(key,val){
+  bmSettings[key]=val;
+  bmUpdateSettingsUI();
+}
+function bmUpdateSettingsUI(){
+  const priceEl = document.getElementById('bm-price');
+  if(priceEl) priceEl.textContent = bmPrice()+' FCFA';
+  const nb=document.getElementById('bm-nb'), col=document.getElementById('bm-couleur');
+  if(nb&&col){
+    nb.style.background = bmSettings.couleur ? '#F5F6FA' : '#FFFFFF';
+    nb.style.border = bmSettings.couleur ? '0.5px solid #D8DBEE' : '2px solid #16A38A';
+    col.style.background = bmSettings.couleur ? '#FFFFFF' : '#F5F6FA';
+    col.style.border = bmSettings.couleur ? '2px solid #16A38A' : '0.5px solid #D8DBEE';
+  }
+  const rvNon=document.getElementById('bm-rv-non'), rvOui=document.getElementById('bm-rv-oui');
+  if(rvNon&&rvOui){
+    rvNon.style.background = bmSettings.rectoverso ? '#F5F6FA' : '#FFFFFF';
+    rvNon.style.border = bmSettings.rectoverso ? '0.5px solid #D8DBEE' : '2px solid #16A38A';
+    rvOui.style.background = bmSettings.rectoverso ? '#FFFFFF' : '#F5F6FA';
+    rvOui.style.border = bmSettings.rectoverso ? '2px solid #16A38A' : '0.5px solid #D8DBEE';
+  }
+}
+
+bmRender();
+</script>

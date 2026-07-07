@@ -199,9 +199,14 @@ export const api = {
     return request<PaymentStatusResponse>(`/payments/${jobId}/status`);
   },
 
-  // Récupère l'URL absolue de l'aperçu du fichier
+  // Récupère l'URL absolue de l'aperçu (PNG miniature)
   getPreviewUrl(jobId: string): string {
     return `${API_BASE_URL}/jobs/${jobId}/preview`;
+  },
+
+  // Récupère l'URL de téléchargement du document source (PDF, DOCX…)
+  getDownloadUrl(jobId: string): string {
+    return `${API_BASE_URL}/jobs/${jobId}/download`;
   },
 
   // Récupère la liste de toutes les bornes (pour la carte)
@@ -229,4 +234,85 @@ export const api = {
       body: JSON.stringify({ agent_pin: pin, withdrawal_code: withdrawalCode }),
     });
   },
+
+  // ── Méthodes de scan WIA ────────────────────────────────────────────────────
+  async createScanSession(
+    kioskId: string,
+    colorMode: "nb" | "couleur" = "nb",
+    resolution: 150 | 200 | 300 = 200
+  ): Promise<ScanSessionResponse> {
+    return request<ScanSessionResponse>("/scan/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kiosk_id: kioskId,
+        color_mode: colorMode,
+        resolution: resolution,
+      }),
+    });
+  },
+
+  async acquireScanPage(scanSessionId: string): Promise<ScanAcquireResponse> {
+    return request<ScanAcquireResponse>(`/scan/sessions/${scanSessionId}/acquire`, {
+      method: "POST",
+    });
+  },
+
+  async getScanSession(scanSessionId: string): Promise<ScanSessionResponse> {
+    return request<ScanSessionResponse>(`/scan/sessions/${scanSessionId}`);
+  },
+
+  async deleteScanPage(scanSessionId: string, pageNumber: number): Promise<ScanSessionResponse> {
+    return request<ScanSessionResponse>(`/scan/sessions/${scanSessionId}/pages/${pageNumber}`, {
+      method: "DELETE",
+    });
+  },
+
+  async finalizeScanSession(scanSessionId: string): Promise<ScanFinalizeResponse> {
+    return request<ScanFinalizeResponse>(`/scan/sessions/${scanSessionId}/finalize`, {
+      method: "POST",
+    });
+  },
+
+  async cancelScanSession(scanSessionId: string): Promise<any> {
+    return request(`/scan/sessions/${scanSessionId}/cancel`, {
+      method: "POST",
+    });
+  },
+
+  getScanPagePreviewUrl(scanSessionId: string, pageNumber: number): string {
+    return `${API_BASE_URL}/scan/sessions/${scanSessionId}/pages/${pageNumber}/preview`;
+  },
 };
+
+export interface ScannedPage {
+  page_number: number;
+  preview_url: string;
+}
+
+export interface ScanSessionResponse {
+  scan_session_id: string;
+  status: string;
+  pages_count: number;
+  color_mode: string;
+  resolution: number;
+  pages: ScannedPage[];
+  print_job_id: string | null;
+  created_at: string;
+}
+
+export interface ScanAcquireResponse {
+  scan_session_id: string;
+  page_number: number;
+  pages_count: number;
+  status: string;
+  preview_url: string;
+}
+
+export interface ScanFinalizeResponse {
+  scan_session_id: string;
+  print_job_id: string;
+  pages: number;
+  status: string;
+}
+

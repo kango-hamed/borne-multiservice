@@ -4,7 +4,8 @@ jobs.py — Endpoints de gestion des jobs d'impression.
 POST  /jobs                → upload fichier, crée le job
 PATCH /jobs/{id}/config    → configure options d'impression + calcule prix
 GET   /jobs/{id}           → statut + position en file (polling léger)
-GET   /jobs/{id}/preview   → aperçu de la première page
+GET   /jobs/{id}/preview   → aperçu de la première page (PNG)
+GET   /jobs/{id}/download  → téléchargement du fichier source (PDF)
 """
 import uuid
 from datetime import datetime, timezone
@@ -314,4 +315,49 @@ async def get_job_preview(
         path=str(preview_path),
         media_type="image/png",
         filename="preview.png",
+    )
+
+
+@router.get("/{job_id}/download")
+async def download_job_document(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    """
+    Retourne le fichier source du job (PDF ou image) pour téléchargement.
+    Utilisé principalement par le flux Scan de document pour permettre
+    à l'utilisateur de récupérer son PDF.
+    """
+    result = await db.execute(select(PrintJob).where(PrintJob.id == job_id))
+    job = result.scalar_one_or_none()
+
+    if job is None:
+        raise JobNotFoundError()
+
+    file_path = Path(job.file_path)
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Fichier source introuvable.",
+        )
+
+    # Détermine le Content-Type et le nom de téléchargement selon l'extension
+    suffix = file_path.suffix.lower()
+    media_types = {
+        ".pdf":  "application/pdf",
+        ".jpg":  "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png":  "image/png",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    media_type = media_types.get(suffix, "application/octet-stream")
+    filename = job.original_filename or file_path.name
+
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        filename=filename,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
     )

@@ -1,6 +1,7 @@
 """
 scan.py — Endpoints pour la gestion du scanner WIA.
 
+<<<<<<< HEAD
 Toutes les routes de modification requièrent la validation du PIN de l'agent.
 """
 import logging
@@ -9,6 +10,15 @@ import os
 import shutil
 from pathlib import Path
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+=======
+Accès libre (réseau local de la borne) — pas d'authentification requise.
+"""
+import logging
+import uuid
+import shutil
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, status
+>>>>>>> v2
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,26 +36,48 @@ from app.exceptions import (
 from app.models.kiosk import Kiosk
 from app.models.scan_session import ScanSession
 from app.models.print_job import PrintJob
+<<<<<<< HEAD
 from app.models.session import Session
+=======
+>>>>>>> v2
 from app.schemas.scan import (
     ScanSessionCreate,
     ScanSessionResponse,
     ScanAcquireResponse,
+<<<<<<< HEAD
     ScanFinalizeRequest,
     ScanFinalizeResponse,
     ScanCancelRequest,
     ScanDeletePageRequest,
+=======
+    ScanFinalizeResponse,
+>>>>>>> v2
     ScanDeviceListResponse,
     ScannedPageInfo,
 )
 from app.services.wia_scanner import scan_page, list_wia_devices, _build_page_path
 from app.services.pdf_utils import assemble_scan_pdf
+<<<<<<< HEAD
 from app.routers.admin import _verify_agent
+=======
+>>>>>>> v2
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Scan WIA"])
 
 
+<<<<<<< HEAD
+=======
+async def _get_scan_session(scan_session_id: uuid.UUID, db: AsyncSession) -> ScanSession:
+    """Récupère une ScanSession active, lève une exception si introuvable."""
+    result = await db.execute(select(ScanSession).where(ScanSession.id == scan_session_id))
+    scan_sess = result.scalar_one_or_none()
+    if scan_sess is None:
+        raise ScanSessionNotFoundError()
+    return scan_sess
+
+
+>>>>>>> v2
 def _get_session_pages(scan_session_id: uuid.UUID) -> list[ScannedPageInfo]:
     """Liste dynamiquement les pages scannées sur disque."""
     session_dir = Path(settings.UPLOAD_DIR) / f"scan_{scan_session_id}"
@@ -74,7 +106,11 @@ async def create_scan_session(
 ) -> ScanSessionResponse:
     """
     Crée une nouvelle session de scan.
+<<<<<<< HEAD
     Valide le PIN agent et l'état de la borne.
+=======
+    Vérifie uniquement que la borne est active (accès libre réseau local).
+>>>>>>> v2
     """
     # 1. Vérification borne
     result = await db.execute(select(Kiosk).where(Kiosk.id == body.kiosk_id))
@@ -84,6 +120,7 @@ async def create_scan_session(
     if kiosk.status != "actif":
         raise KioskOfflineError()
 
+<<<<<<< HEAD
     # 2. Vérification agent
     await _verify_agent(body.kiosk_id, body.agent_pin, db)
 
@@ -99,6 +136,13 @@ async def create_scan_session(
         id=uuid.uuid4(),
         kiosk_id=body.kiosk_id,
         session_id=body.session_id,
+=======
+    # 2. Création
+    scan_sess = ScanSession(
+        id=uuid.uuid4(),
+        kiosk_id=body.kiosk_id,
+        session_id=None,
+>>>>>>> v2
         color_mode=body.color_mode,
         resolution=body.resolution,
         status="ouvert",
@@ -121,11 +165,15 @@ async def create_scan_session(
 @router.post("/sessions/{scan_session_id}/acquire", response_model=ScanAcquireResponse)
 async def acquire_page(
     scan_session_id: uuid.UUID,
+<<<<<<< HEAD
     x_agent_pin: str = Header(..., alias="X-Agent-Pin"),
+=======
+>>>>>>> v2
     db: AsyncSession = Depends(get_db),
 ) -> ScanAcquireResponse:
     """
     Déclenche l'acquisition d'une page (synchrone/bloquant).
+<<<<<<< HEAD
     Le header X-Agent-Pin est requis.
     """
     # 1. Récupération session de scan
@@ -138,6 +186,14 @@ async def acquire_page(
     await _verify_agent(scan_sess.kiosk_id, x_agent_pin, db)
 
     # 3. Validation statut session
+=======
+    Accès libre — pas d'authentification requise.
+    """
+    # 1. Récupération de la session de scan
+    scan_sess = await _get_scan_session(scan_session_id, db)
+
+    # 2. Validation statut session
+>>>>>>> v2
     if scan_sess.status == "en_acquisition":
         raise ScanSessionBusyError()
     if scan_sess.status != "ouvert":
@@ -237,19 +293,26 @@ async def get_scan_page_preview(
 async def delete_scan_page(
     scan_session_id: uuid.UUID,
     page_number: int,
+<<<<<<< HEAD
     x_agent_pin: str = Header(..., alias="X-Agent-Pin"),
+=======
+>>>>>>> v2
     db: AsyncSession = Depends(get_db),
 ) -> ScanSessionResponse:
     """
     Supprime la dernière page scannée de la session (pour corriger un mauvais scan).
     Ne permet que de supprimer la dernière page pour conserver l'ordre séquentiel.
     """
+<<<<<<< HEAD
     result = await db.execute(select(ScanSession).where(ScanSession.id == scan_session_id))
     scan_sess = result.scalar_one_or_none()
     if scan_sess is None:
         raise ScanSessionNotFoundError()
 
     await _verify_agent(scan_sess.kiosk_id, x_agent_pin, db)
+=======
+    scan_sess = await _get_scan_session(scan_session_id, db)
+>>>>>>> v2
 
     if scan_sess.status != "ouvert":
         raise ScanSessionClosedError(scan_sess.status)
@@ -285,18 +348,25 @@ async def delete_scan_page(
 @router.post("/sessions/{scan_session_id}/finalize", response_model=ScanFinalizeResponse)
 async def finalize_scan_session(
     scan_session_id: uuid.UUID,
+<<<<<<< HEAD
     body: ScanFinalizeRequest,
+=======
+>>>>>>> v2
     db: AsyncSession = Depends(get_db),
 ) -> ScanFinalizeResponse:
     """
     Finalise la session : assemble les PNGs en PDF et crée le PrintJob associé.
     """
+<<<<<<< HEAD
     result = await db.execute(select(ScanSession).where(ScanSession.id == scan_session_id))
     scan_sess = result.scalar_one_or_none()
     if scan_sess is None:
         raise ScanSessionNotFoundError()
 
     await _verify_agent(scan_sess.kiosk_id, body.agent_pin, db)
+=======
+    scan_sess = await _get_scan_session(scan_session_id, db)
+>>>>>>> v2
 
     if scan_sess.status != "ouvert":
         raise ScanSessionClosedError(scan_sess.status)
@@ -314,7 +384,15 @@ async def finalize_scan_session(
     # 3. Assembler le PDF
     pdf_path, pages_count = await assemble_scan_pdf(image_paths, job_id)
 
+<<<<<<< HEAD
     # 4. Création du PrintJob standard
+=======
+    # 4. Calcul du prix du scan : 25 FCFA/page en N&B, 75 FCFA/page en Couleur
+    price_per_page = 75 if scan_sess.color_mode == "couleur" else 25
+    total_price = price_per_page * pages_count
+
+    # 5. Création du PrintJob standard directement prêt pour le paiement
+>>>>>>> v2
     job = PrintJob(
         id=job_id,
         session_id=scan_sess.session_id,
@@ -322,11 +400,23 @@ async def finalize_scan_session(
         file_path=pdf_path,
         original_filename="Document scanné.pdf",
         pages=pages_count,
+<<<<<<< HEAD
         status="en_creation",
     )
     db.add(job)
 
     # 5. Clôture de la session de scan
+=======
+        copies=1,
+        color_mode=scan_sess.color_mode,
+        duplex=False,
+        price_fcfa=total_price,
+        status="attente_paiement",
+    )
+    db.add(job)
+
+    # 6. Clôture de la session de scan
+>>>>>>> v2
     scan_sess.status = "termine"
     scan_sess.pdf_path = pdf_path
     scan_sess.print_job_id = job_id
@@ -343,18 +433,25 @@ async def finalize_scan_session(
 @router.post("/sessions/{scan_session_id}/cancel")
 async def cancel_scan_session(
     scan_session_id: uuid.UUID,
+<<<<<<< HEAD
     body: ScanCancelRequest,
+=======
+>>>>>>> v2
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
     Annule la session de scan et nettoie les fichiers temporaires sur disque.
     """
+<<<<<<< HEAD
     result = await db.execute(select(ScanSession).where(ScanSession.id == scan_session_id))
     scan_sess = result.scalar_one_or_none()
     if scan_sess is None:
         raise ScanSessionNotFoundError()
 
     await _verify_agent(scan_sess.kiosk_id, body.agent_pin, db)
+=======
+    scan_sess = await _get_scan_session(scan_session_id, db)
+>>>>>>> v2
 
     if scan_sess.status not in ("ouvert", "en_acquisition"):
         raise ScanSessionClosedError(scan_sess.status)

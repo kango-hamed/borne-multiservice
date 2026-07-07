@@ -73,64 +73,66 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="h-[100dvh] bg-slate-50 flex flex-col overflow-hidden">
       <StepHeader title="Paiement" step={5} />
 
-      <div className="flex-1 px-4 py-6 flex flex-col gap-5">
+      <div className="flex-1 px-4 py-5 flex flex-col gap-4 overflow-hidden">
         {/* Montant */}
         {fileMetadata?.price && (
-          <div className="bg-primary rounded-2xl px-5 py-4 flex items-center justify-between text-white">
-            <span className="font-medium text-accent/80 text-sm">À payer</span>
-            <span className="text-2xl font-extrabold">{fileMetadata.price.toLocaleString("fr-FR")} FCFA</span>
+          <div className="bg-primary rounded-2xl px-4 py-3 flex items-center justify-between text-white shrink-0 shadow-sm">
+            <span className="font-semibold text-accent/80 text-xs uppercase tracking-wider">Montant total</span>
+            <span className="text-xl font-extrabold">{fileMetadata.price.toLocaleString("fr-FR")} FCFA</span>
           </div>
         )}
 
         {/* Sélection opérateur */}
-        <div>
-          <p className="text-sm font-semibold text-neutral-dark/60 mb-3 uppercase tracking-wider">Choisir l'opérateur</p>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col min-h-0">
+          <p className="text-[10px] font-bold text-neutral-dark/60 mb-2 uppercase tracking-wider shrink-0">Choisir l'opérateur</p>
+          <div className="grid grid-cols-2 gap-2.5 shrink-0">
             {PROVIDERS.map((p) => (
               <button
                 key={p.id}
                 onClick={() => setSelectedProvider(p.id)}
                 className={`
-                  border-2 rounded-2xl p-4 flex flex-col items-center gap-2 transition-all duration-200
+                  border rounded-xl p-2.5 flex items-center gap-3 transition-all duration-200 text-left
                   ${selectedProvider === p.id
-                    ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
-                    : `${p.color} hover:border-primary/30`
+                    ? "border-primary bg-primary/5 shadow-sm scale-[1.01]"
+                    : `${p.color} hover:border-primary/20`
                   }
                 `}
               >
-                <div className="mb-1">{p.icon}</div>
-                <span className="text-xs font-semibold text-neutral-dark text-center leading-tight">{p.label}</span>
-                {selectedProvider === p.id && (
-                  <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-semibold">Sélectionné</span>
-                )}
+                <div className="shrink-0">{p.icon}</div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-bold text-neutral-dark block truncate">{p.label}</span>
+                  {selectedProvider === p.id && (
+                    <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">Sélectionné</span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
         </div>
 
         {/* Numéro de téléphone */}
-        <div className="bg-white rounded-2xl border border-accent/30 p-4">
-          <label className="block text-sm font-semibold text-neutral-dark/60 mb-2">
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm shrink-0">
+          <label className="block text-[10px] font-bold text-neutral-dark/60 mb-1.5 uppercase tracking-wider">
             Numéro Mobile Money
           </label>
-          <div className="flex items-center gap-3">
-            <span className="text-neutral-dark/50 text-sm font-medium shrink-0">🇨🇮 +225</span>
+          <div className="flex items-center gap-2">
+            <span className="text-neutral-dark/50 text-sm font-semibold shrink-0">🇨🇮 +225</span>
             <input
               type="tel"
               value={phone}
               onChange={handlePhoneChange}
               placeholder="07 00 00 00 00"
-              className="flex-1 bg-transparent text-lg font-semibold text-neutral-dark placeholder:text-neutral-dark/25 outline-none"
+              className="flex-1 bg-transparent text-base font-bold text-neutral-dark placeholder:text-neutral-dark/20 outline-none"
               maxLength={14} // 10 chiffres + 4 espaces max
             />
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 font-medium">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-xs text-red-600 font-semibold shrink-0">
             ⚠️ {error}
           </div>
         )}
@@ -139,14 +141,14 @@ export default function PaymentPage() {
           onClick={handlePay}
           disabled={!canPay}
           className={`
-            mt-auto w-full py-4 rounded-2xl font-bold text-lg transition-all duration-200
+            mt-auto w-full py-4 rounded-2xl font-bold text-lg transition-all duration-200 shrink-0
             ${canPay
               ? "bg-success text-white shadow-lg shadow-success/30 active:scale-[0.98]"
               : "bg-neutral-dark/10 text-neutral-dark/30 cursor-not-allowed"
             }
           `}
         >
-          {loading ? "Traitement..." : `Initier le paiement →`}
+          {loading ? "Traitement..." : `Payer ${fileMetadata?.price ? `${fileMetadata.price.toLocaleString("fr-FR")} FCFA` : ""}`}
         </button>
       </div>
     </div>

@@ -101,47 +101,26 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="h-[100dvh] bg-slate-50 flex flex-col overflow-hidden">
       <StepHeader title="Votre document" step={2} showBack={true} />
 
-      <div className="flex-1 px-4 py-6 flex flex-col gap-5">
-        {/* Scanner avec l'appareil photo */}
-        <button
-          onClick={() => router.push("/flow/scan")}
-          className="flex items-center gap-4 rounded-2xl p-4 bg-primary text-white shadow-lg shadow-primary/25 active:scale-[0.99] transition-transform text-left"
-        >
-          <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-            </svg>
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold text-base">Scanner un document</p>
-            <p className="text-xs text-accent/80 mt-0.5">{"Photographiez vos pages avec l'appareil photo"}</p>
-          </div>
-          <svg className="w-5 h-5 ml-auto text-white/70 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-          </svg>
-        </button>
-
-        {/* Séparateur */}
-        <div className="flex items-center gap-3">
-          <span className="flex-1 h-px bg-accent/40" />
-          <span className="text-xs font-semibold text-neutral-dark/40 uppercase tracking-wider">ou importer un fichier</span>
-          <span className="flex-1 h-px bg-accent/40" />
+      <div className="flex-1 px-4 py-5 flex flex-col gap-4 overflow-hidden">
+        {/* Titre d'instruction */}
+        <div>
+          <h2 className="text-base font-bold text-neutral-dark">Ajoutez votre document</h2>
+          <p className="text-xs text-neutral-dark/50 mt-0.5">Choisissez le fichier à imprimer depuis votre appareil.</p>
         </div>
 
-        {/* Zone de dépôt */}
+        {/* Zone de dépôt / clic */}
         <div
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           className={`
-            relative border-2 border-dashed rounded-2xl p-8 cursor-pointer
+            flex-1 border-2 border-dashed rounded-2xl p-6 cursor-pointer
             flex flex-col items-center justify-center gap-4 text-center
-            transition-all duration-200 min-h-48
+            transition-all duration-200 min-h-0
             ${isDragging ? "border-primary bg-accent/20 scale-[1.01]" : "border-accent bg-white hover:border-primary/50 hover:bg-accent/10"}
             ${selectedFile ? "border-success bg-success/5" : ""}
           `}
@@ -157,26 +136,28 @@ export default function UploadPage() {
           {selectedFile ? (
             <>
               {fileTypeIcon(selectedFile.type)}
-              <div>
-                <p className="font-semibold text-neutral-dark truncate max-w-[260px]">
+              <div className="min-w-0 px-2">
+                <p className="font-semibold text-neutral-dark truncate max-w-[240px]">
                   {selectedFile.name}
                 </p>
-                <p className="text-sm text-neutral-dark/50 mt-1">{fileSizeMB} Mo</p>
+                <p className="text-xs text-neutral-dark/50 mt-0.5">{fileSizeMB} Mo</p>
               </div>
               <span className="text-xs px-3 py-1 bg-success/15 text-success rounded-full font-semibold">
-                Fichier sélectionné ✓
+                Fichier prêt ✓
               </span>
             </>
           ) : (
             <>
-              <div className="w-14 h-14 rounded-2xl bg-accent/30 flex items-center justify-center">
-                <svg className="w-7 h-7 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <div className="w-14 h-14 rounded-2xl bg-accent/30 flex items-center justify-center text-primary">
+                <svg className="w-7 h-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
               </div>
               <div>
-                <p className="font-semibold text-primary">Choisir un fichier</p>
-                <p className="text-xs text-neutral-dark/50 mt-1">PDF, JPG, PNG ou DOCX · Max {MAX_SIZE_MB} Mo</p>
+                <p className="font-bold text-primary text-base">Choisir un fichier</p>
+                <p className="text-[11px] text-neutral-dark/50 mt-1 leading-normal max-w-[200px] mx-auto">
+                  Cliquez ici pour parcourir vos fichiers.
+                </p>
               </div>
             </>
           )}
@@ -184,17 +165,17 @@ export default function UploadPage() {
 
         {/* Message d'erreur */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 font-medium">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-xs text-red-600 font-semibold shrink-0">
             ⚠️ {error}
           </div>
         )}
 
         {/* Formats acceptés */}
-        <div className="bg-white rounded-2xl p-4 border border-accent/30">
-          <p className="text-xs font-semibold text-neutral-dark/50 uppercase tracking-wider mb-2">Formats acceptés</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm shrink-0">
+          <p className="text-[10px] font-bold text-neutral-dark/50 uppercase tracking-wider mb-2">Formats acceptés</p>
+          <div className="flex gap-1.5">
             {["PDF", "JPG / PNG", "DOCX"].map((fmt) => (
-              <span key={fmt} className="px-3 py-1 bg-accent/20 text-primary text-xs font-semibold rounded-full">
+              <span key={fmt} className="px-3 py-1 bg-accent/15 text-primary text-xs font-semibold rounded-full">
                 {fmt}
               </span>
             ))}
@@ -207,7 +188,7 @@ export default function UploadPage() {
           disabled={!selectedFile || uploading}
           onClick={handleUpload}
           className={`
-            mt-auto w-full py-4 rounded-2xl font-bold text-lg transition-all duration-200
+            w-full py-4 rounded-2xl font-bold text-lg transition-all duration-200 shrink-0
             ${selectedFile && !uploading
               ? "bg-primary text-white shadow-lg shadow-primary/30 active:scale-[0.98]"
               : "bg-neutral-dark/10 text-neutral-dark/30 cursor-not-allowed"

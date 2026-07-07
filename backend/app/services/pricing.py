@@ -15,7 +15,7 @@ import math
 # ── Grille tarifaire ──────────────────────────────────────────────────────────
 PRICE_TABLE: dict[str, int] = {
     "nb_recto": 50,
-    "nb_recto_verso": 80,
+    "nb_recto_verso": 50,
     "couleur_recto": 150,
     "couleur_recto_verso": 250,
 }
